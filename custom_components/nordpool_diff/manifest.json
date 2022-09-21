@@ -1,11 +1,11 @@
 {
-  "domain": "nordpool_diff",
-  "name": "nordpool_diff",
-  "documentation": "https://github.com/jpulakka/nordpool_diff",
-  "issue_tracker": "https://github.com/jpulakka/nordpool_diff/issues",
+  "domain": "nordpool_planner",
+  "name": "nordpool_planner",
+  "documentation": "https://github.com/dala318/nordpool_planner",
+  "issue_tracker": "https://github.com/dala318/nordpool_planner/issues",
   "requirements": [],
   "dependencies": ["nordpool"],
-  "codeowners": ["@jpulakka"],
+  "codeowners": ["@dala318", "@jpulakka"],
   "iot_class": "calculated",
   "version": "0.1.4"
 }
