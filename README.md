@@ -1,6 +1,8 @@
-# nordpool_diff custom component for Home Assistant
+# nordpool_planner custom component for Home Assistant
 
 Requires https://github.com/custom-components/nordpool
+
+> **NOTE**: This is a based on https://github.com/jpulakka/nordpool_diff
 
 [Nord Pool](https://www.nordpoolgroup.com/) gives you spot prices, but making good use of those prices is not easy.
 This component provides various algorithms whose output can be used for deciding when to turn water heater or
@@ -15,26 +17,27 @@ because expensive peaks are produced by dirtier energy sources. Also helps solvi
 ### Option 1: HACS
 1. Go to HACS -> Integrations
 2. Click the three dots on the top right and select `Custom Repositories`
-3. Enter `https://github.com/jpulakka/nordpool_diff` as repository, select the category `Integration` and click Add
-4. A new custom integration shows up for installation (Nordpool Diff) - install it
+3. Enter `https://github.com/dala318/nordpool_planner` as repository, select the category `Integration` and click Add
+4. A new custom integration shows up for installation (Nordpool Planner) - install it
 5. Restart Home Assistant
 
 ### Option 2: Manual
 
 1. Install and configure https://github.com/custom-components/nordpool first.
-2. Copy the `nordpool_diff` folder to HA `<config_dir>/custom_components/nordpool_diff/`
+2. Copy the `nordpool_planner` folder to HA `<config_dir>/custom_components/nordpool_planner/`
 3. Restart HA. (Skipping restarting before modifying configuration would give "Integration 'nordpool_diff' not found"
    error message from the configuration.)
 4. Add the following to your `configuration.yaml` file:
 
     ```yaml
     sensor:
-      - platform: nordpool_diff
+      - platform: nordpool_planner
         nordpool_entity: sensor.nordpool_kwh_fi_eur_3_095_024
     ```
 
    Modify the `nordpool_entity` value according to your exact nordpool entity ID.
 
+<!---
 5. Restart HA again to load the configuration. Now you should see `nordpool_diff_triangle_10` sensor, where
    the `triangle_10` part corresponds to default values of optional parameters, explained below.
 
@@ -130,3 +133,4 @@ hour value into account.
 
 [^1]: Fancy way of saying that the price for the current hour is subtracted from the average price for the next few
 hours.
+--->
