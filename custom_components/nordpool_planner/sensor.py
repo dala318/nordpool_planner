@@ -45,7 +45,7 @@ def setup_platform(
     normalize = config[NORMALIZE]
     unit = config[UNIT]
 
-    add_entities([NordpoolDiffSensor(nordpool_entity_id, filter_length, filter_type, normalize, unit)])
+    add_entities([NordpoolPlannerSensor(nordpool_entity_id, filter_length, filter_type, normalize, unit)])
 
 def _with_interval(prices):
     p_min = min(prices)
@@ -58,7 +58,7 @@ def _with_rank(prices):
 def _with_filter(filter, normalize):
     return lambda prices : sum([a * b for a, b in zip(prices, filter)]) * normalize(prices)
 
-class NordpoolDiffSensor(SensorEntity):
+class NordpoolPlannerSensor(SensorEntity):
     _attr_icon = "mdi:flash"
 
     def __init__(self, nordpool_entity_id, filter_length, filter_type, normalize, unit):
@@ -88,7 +88,7 @@ class NordpoolDiffSensor(SensorEntity):
             filter += [1 / (filter_length - 1)] * (filter_length - 1)
             self._compute = _with_filter(filter, normalize)
         self._attr_native_unit_of_measurement = unit
-        self._attr_name = f"nordpool_diff_{filter_type}_{filter_length}{normalize_suffix}"
+        self._attr_name = f"nordpool_planner_{filter_type}_{filter_length}{normalize_suffix}"
         # https://developers.home-assistant.io/docs/entity_registry_index/ : Entities should not include the domain in
         # their Unique ID as the system already accounts for these identifiers:
         self._attr_unique_id = f"{filter_type}_{filter_length}_{unit}{normalize_suffix}"
