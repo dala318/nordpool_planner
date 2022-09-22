@@ -58,7 +58,7 @@ and `0.0`, respectively:
 
 `duration` specifies how large window in hours to slide forward in search for a minimum price.
 
-`accept_level` specifies a price level that if average over search window is below is accepted and used, even if not the lowest in the range specified.
+`accept_level` specifies a price level, that if an average over search window is below this value, is accepted and used. Even if not the lowest in the range specified.
 
 <!---
 ![Diff example](diff_example.png)
