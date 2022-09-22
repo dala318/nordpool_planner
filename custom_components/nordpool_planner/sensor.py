@@ -1,5 +1,7 @@
 from __future__ import annotations
+from http.client import ACCEPTED
 
+import logging
 import voluptuous as vol
 import homeassistant.helpers.config_validation as cv
 from homeassistant.components.sensor import PLATFORM_SCHEMA, SensorEntity
@@ -9,90 +11,57 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 from homeassistant.util import dt
 
+_LOGGER = logging.getLogger(__name__)
+
 NORDPOOL_ENTITY = "nordpool_entity"
-FILTER_LENGTH = "filter_length"
-FILTER_TYPE = "filter_type"
-RECTANGLE = "rectangle"
-TRIANGLE = "triangle"
-RANK = "rank"
-INTERVAL = "interval"
-NORMALIZE = "normalize"
-NO = "no"
-MAX = "max"
-MAX_MIN = "max_min"
-UNIT = "unit"
+SEARCH_LENGTH = "search_length"
+DURATION = "duration"
+ACCEPT_RATE = "accept_rate"
 
 # https://developers.home-assistant.io/docs/development_validation/
 # https://github.com/home-assistant/core/blob/dev/homeassistant/helpers/config_validation.py
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required(NORDPOOL_ENTITY): cv.entity_id,
-    vol.Optional(FILTER_LENGTH, default=10): vol.All(vol.Coerce(int), vol.Range(min=2, max=20)),
-    vol.Optional(FILTER_TYPE, default=TRIANGLE): vol.In([RECTANGLE, TRIANGLE, INTERVAL, RANK]),
-    vol.Optional(NORMALIZE, default=NO): vol.In([NO, MAX, MAX_MIN]),
-    vol.Optional(UNIT, default="EUR/kWh/h"): cv.string
+    vol.Optional(SEARCH_LENGTH, default=10): vol.All(vol.Coerce(int), vol.Range(min=2, max=24)),
+    vol.Optional(DURATION, default=2): vol.All(vol.Coerce(int), vol.Range(min=1, max=5)),
+    vol.Optional(ACCEPT_RATE, default=0.0): vol.All(vol.Coerce(float), vol.Range(min=0.0, max=10000.0)),
 })
 
 
 def setup_platform(
-        hass: HomeAssistant,
-        config: ConfigType,
-        add_entities: AddEntitiesCallback,
-        discovery_info: DiscoveryInfoType | None = None
+    hass: HomeAssistant,
+    config: ConfigType,
+    add_entities: AddEntitiesCallback,
+    discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     nordpool_entity_id = config[NORDPOOL_ENTITY]
-    filter_length = config[FILTER_LENGTH]
-    filter_type = config[FILTER_TYPE]
-    normalize = config[NORMALIZE]
-    unit = config[UNIT]
+    search_length = config[SEARCH_LENGTH]
+    duration = config[DURATION]
+    accept_rate = config[ACCEPT_RATE]
 
-    add_entities([NordpoolPlannerSensor(nordpool_entity_id, filter_length, filter_type, normalize, unit)])
+    add_entities(
+        [
+            NordpoolPlannerSensor(
+                nordpool_entity_id, search_length, duration, accept_rate
+            )
+        ]
+    )
 
-def _with_interval(prices):
-    p_min = min(prices)
-    p_max = max(prices)
-    return 1 - 2 * (prices[0]-p_min)/(p_max-p_min)
-
-def _with_rank(prices):
-    return 1 - 2 * sorted(prices).index(prices[0]) / (len(prices) - 1)
-
-def _with_filter(filter, normalize):
-    return lambda prices : sum([a * b for a, b in zip(prices, filter)]) * normalize(prices)
 
 class NordpoolPlannerSensor(SensorEntity):
     _attr_icon = "mdi:flash"
 
-    def __init__(self, nordpool_entity_id, filter_length, filter_type, normalize, unit):
+    def __init__(self, nordpool_entity_id, search_length, duration, accept_rate):
         self._nordpool_entity_id = nordpool_entity_id
-        self._filter_length = filter_length
-        if normalize == MAX:
-            normalize = lambda prices : 1 / (max(prices) if max(prices) > 0 else 1)
-            normalize_suffix = "_normalize_max"
-        elif normalize == MAX_MIN:
-            normalize = lambda prices : 1 / (max(prices) - min(prices) if max(prices) - min(prices) > 0 else 1)
-            normalize_suffix = "_normalize_max_min"
-        else:  # NO
-            normalize = lambda prices : 1
-            normalize_suffix = ""
-        if filter_type == RANK:
-            self._compute = _with_rank
-        elif filter_type == INTERVAL:
-            self._compute = _with_interval
-        elif filter_type == TRIANGLE:
-            filter = [-1]
-            triangular_number = (filter_length * (filter_length - 1)) / 2
-            for i in range(filter_length - 1, 0, -1):
-                filter += [i / triangular_number]
-            self._compute = _with_filter(filter, normalize)
-        else:  # RECTANGLE
-            filter = [-1]
-            filter += [1 / (filter_length - 1)] * (filter_length - 1)
-            self._compute = _with_filter(filter, normalize)
-        self._attr_native_unit_of_measurement = unit
-        self._attr_name = f"nordpool_planner_{filter_type}_{filter_length}{normalize_suffix}"
+        self._search_length = search_length
+        self._duration = duration
+        self._accept_rate = accept_rate
+        self._attr_name = f"nordpool_planner_{duration}_{search_length}"
         # https://developers.home-assistant.io/docs/entity_registry_index/ : Entities should not include the domain in
         # their Unique ID as the system already accounts for these identifiers:
-        self._attr_unique_id = f"{filter_type}_{filter_length}_{unit}{normalize_suffix}"
-        self._state = self._next_hour = STATE_UNKNOWN
+        self._attr_unique_id = f"{duration}_{search_length}"
+        self._state = self._starts_in = STATE_UNKNOWN
+        self._cost_buffer = {}
 
     @property
     def state(self):
@@ -101,23 +70,52 @@ class NordpoolPlannerSensor(SensorEntity):
     @property
     def extra_state_attributes(self):
         # TODO could also add self._nordpool_entity_id etc. useful properties here.
-        return {"next_hour": self._next_hour}
+        return {"starts_in": self._starts_in}
 
     def update(self):
-        prices = self._get_next_n_hours(self._filter_length + 1)  # +1 to calculate next hour
-        self._state = round(self._compute(prices[:-1]), 3)
-        self._next_hour = round(self._compute(prices[1:]), 3)
-
-    def _get_next_n_hours(self, n):
         np = self.hass.states.get(self._nordpool_entity_id)
+        if np is None:
+            _LOGGER.warning("Got empty data from Norpool entity %s ", self._nordpool_entity_id)
+            return
         prices = np.attributes["today"]
-        hour = dt.now().hour
-        # Get tomorrow if needed:
-        if len(prices) < hour + n and np.attributes["tomorrow_valid"]:
-            prices = prices + np.attributes["tomorrow"]
-        # Nordpool sometimes returns null prices, https://github.com/custom-components/nordpool/issues/125
-        # The nulls are typically at (tail of) "tomorrow", so simply removing them is reasonable:
-        prices = [x for x in prices if x is not None]
-        # Pad if needed, using last element:
-        prices = prices + (hour + n - len(prices)) * [prices[-1]]
-        return prices[hour: hour + n]
+        if np.attributes["tomorrow_valid"]:
+            prices += np.attributes["tomorrow"]
+
+        now_hour = dt.now().hour
+        min_average = 1000000000
+        min_start_hour = now_hour
+        for i in range(
+            max(now_hour - self._duration, 0), len(prices) - self._search_length
+        ):
+            prince_range = prices[i : i + self._duration]
+            # Nordpool sometimes returns null prices, https://github.com/custom-components/nordpool/issues/125
+            # If 50% or more non-Null in range accept and use
+            if len([[x for x in prince_range if x is not None]]) * 2 < len(prince_range):
+                _LOGGER.debug("Skipping range at %s as to many empty", i)
+                continue
+            prices = [x for x in prices if x is not None]
+            average = sum(prince_range) / self._duration
+            if average < min_average:
+                min_average = average
+                min_start_hour = i
+                _LOGGER.debug("New min value at %s", i)
+            if average < self._accept_rate:
+                min_start_hour = i
+                _LOGGER.debug("Found range under accept level at %s", i)
+                break
+
+        if now_hour > min_start_hour:
+            self._state = True
+            self._starts_in = 0
+        else:
+            self._state = False
+            now = dt.now()
+            begin = now
+            begin.second = 0
+            begin.minute = 0
+            # Check if next day
+            if begin.hour < now.hour:
+                begin.day += 1
+                min_start_hour -= 24
+            begin.hour = min_start_hour
+            self._starts_in = begin - now
