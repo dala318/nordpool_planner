@@ -37,32 +37,30 @@ because expensive peaks are produced by dirtier energy sources. Also helps solvi
 
    Modify the `nordpool_entity` value according to your exact nordpool entity ID.
 
-<!---
 5. Restart HA again to load the configuration. Now you should see `nordpool_diff_triangle_10` sensor, where
    the `triangle_10` part corresponds to default values of optional parameters, explained below.
 
 ## Optional parameters
 
-Optional parameters to configure include `filter_length`, `filter_type`, `unit` and `normalize`, defaults are `10`, `triangle`,
-`EUR/kWh/h` and `no`, respectively:
+Optional parameters to configure include `search_length`, `duration` and `accept_level`, defaults are `10`, `2`
+and `0.0`, respectively:
 
  ```yaml
  sensor:
-   - platform: nordpool_diff
+   - platform: nordpool_planner
      nordpool_entity: sensor.nordpool_kwh_fi_eur_3_095_024
-     filter_length: 10
-     filter_type: triangle
-     unit: EUR/kWh/h
-     normalize: no
+     search_length: 10
+     duration: 2
+     accept_level: 0.0
  ```
 
-`unit` can be any string. The default is EUR/kWh/h to reflect that the sensor output loosely speaking reflects change
-rate (1/h) of hourly price (EUR/kWh).
+`search_length` can be in the range of 2 to 24 and specifies how many hours ahead to serach for lowest price.
 
-`filter_length` value must be an integer between 2...20, and `filter_type` must be either `triangle`, `rectangle`,
-`rank` or `interval`. They are best explained by examples. You can set up several `nordpool_diff` entities,
-each with different parameters, plot them in Lovelace, and pick what you like best. Here is an example:
+`duration` specifies how large window in hours to slide forward in search for a minimum price.
 
+`accept_level` specifies a price level that if average over search window is below is accepted and used, even if not the lowest in the range specified.
+
+<!---
 ![Diff example](diff_example.png)
 
 ## Triangle and rectangle
