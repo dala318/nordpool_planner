@@ -77,15 +77,18 @@ class NordpoolPlannerSensor(SensorEntity):
         if np is None:
             _LOGGER.warning("Got empty data from Norpool entity %s ", self._nordpool_entity_id)
             return
+        if not np.attributes.has_key("today"):
+            _LOGGER.warning("No values for today in Norpool entity %s ", self._nordpool_entity_id)
+            return
         prices = np.attributes["today"]
         if np.attributes["tomorrow_valid"]:
             prices += np.attributes["tomorrow"]
 
-        now_hour = dt.now().hour
+        now = dt.now()
         min_average = 1000000000
-        min_start_hour = now_hour
+        min_start_hour = now.hour
         for i in range(
-            max(now_hour - self._duration, 0), len(prices) - self._search_length
+            max(now.hour - self._duration, 0), len(prices) - self._search_length
         ):
             prince_range = prices[i : i + self._duration]
             # Nordpool sometimes returns null prices, https://github.com/custom-components/nordpool/issues/125
@@ -104,18 +107,15 @@ class NordpoolPlannerSensor(SensorEntity):
                 _LOGGER.debug("Found range under accept level at %s", i)
                 break
 
-        if now_hour > min_start_hour:
+        if now.hour > min_start_hour:
             self._state = True
             self._starts_in = 0
         else:
             self._state = False
-            now = dt.now()
-            begin = now
-            begin.second = 0
-            begin.minute = 0
+            start = now
             # Check if next day
-            if begin.hour < now.hour:
-                begin.day += 1
+            if min_start_hour < 23:
+                start += dt.parse_duration("1 day")
                 min_start_hour -= 24
-            begin.hour = min_start_hour
+            begin = dt.parse_datetime("%s-%s-%s %s:%s" % (start.year, start.month, start.day, min_start_hour, 0))
             self._starts_in = begin - now
