@@ -67,4 +67,6 @@ Some words should be said about the usage and how it behaves.
 
 The search length variable should be set to to a value within which you could accept no high electricity usage, and the ratio window/search should somewhat correspond to the active/passive time of your main user of electricity. Still, the search window for the optimal spot to electricity is moving along in front of corrent time, so there might be a longer duration of passive usage than the search length. Therefor keeping the search length low (3-5h) should likely be optimal, unless you have a large storage capacity of electricity/heat that can wait for a longer duration and when cheap electricity draw as much as possible.
 
+![image](planning_example.png)
+
 Try it and feedback how it works of if there are any improvment to be done!
