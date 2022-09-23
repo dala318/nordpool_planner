@@ -5,9 +5,9 @@ Requires https://github.com/custom-components/nordpool
 > **NOTE**: This is a based on https://github.com/jpulakka/nordpool_diff
 
 [Nord Pool](https://www.nordpoolgroup.com/) gives you spot prices, but making good use of those prices is not easy.
-This component provides various algorithms whose output can be used for deciding when to turn water heater or
-car charger on/off, or for adjusting target temperature of a heater so that it will heat more just before prices
-will go up (to allow heating less when prices are high), and heat less just before prices will go down.
+This component provides various a boolean if now is the right time to activate high consumption based on future prices
+in a specified range. Given a time-span from now and an number of hours forward it searches for the start-time that has the
+lowest average price over a specified duration window.
 
 Apart from potentially saving some money, this kind of temporal shifting of consumption can also save the environment,
 because expensive peaks are produced by dirtier energy sources. Also helps solving Europe's electricity crisis.
