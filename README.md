@@ -67,7 +67,7 @@ Apart from the true/false if now is the time to turn on electricity usage the se
 
 `cost_at` tell what the average cost is at the lowest point identified
 
-`now_cost_rate` tell a comparison average/np_average, the value `accept_rate` compares to
+`now_cost_rate` tell a comparison current price / best average
 
 ## Usage
 
