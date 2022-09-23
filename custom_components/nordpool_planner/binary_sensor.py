@@ -62,7 +62,8 @@ class NordpoolPlannerSensor(BinarySensorEntity):
         self._attr_unique_id = f"{duration}_{search_length}"
         self._state = STATE_UNKNOWN
         self._starts_at = STATE_UNKNOWN
-        self._cost_buffer = {}
+        self._cost_at = STATE_UNKNOWN
+        self._now_cost_rate = STATE_UNKNOWN
 
     @property
     def state(self):
@@ -71,7 +72,11 @@ class NordpoolPlannerSensor(BinarySensorEntity):
     @property
     def extra_state_attributes(self):
         # TODO could also add self._nordpool_entity_id etc. useful properties here.
-        return {"starts_at": self._starts_at}  # self._starts_at
+        return {
+            "starts_at": self._starts_at,
+            "cost_at": self._cost_at,
+            "now_cost_rate": self._now_cost_rate,
+        }
 
     def update(self):
         np = self.hass.states.get(self._nordpool_entity_id)
@@ -108,6 +113,7 @@ class NordpoolPlannerSensor(BinarySensorEntity):
                 min_start_hour = i
                 _LOGGER.debug("New min value at %s", i)
             if average < self._accept_rate:
+                min_average = average
                 min_start_hour = i
                 _LOGGER.debug("Found range under accept level at %s", i)
                 break
@@ -131,3 +137,5 @@ class NordpoolPlannerSensor(BinarySensorEntity):
             min_start_hour,
             0,
         )
+        self._cost_at = min_average
+        self._now_cost_rate = np.attributes["current_price"] / min_average
