@@ -39,8 +39,7 @@ Apart from potentially saving some money, this kind of temporal shifting of cons
 
 ## Optional parameters
 
-Optional parameters to configure include `search_length`, `duration` and `accept_level`, defaults are `10`, `2`
-and `0.0`, respectively:
+Optional parameters to configure include `search_length`, `duration`, `accept_cost` and `accept_rate`, defaults are `10`, `2`, `0.0` and `0.0`, respectively:
 
  ```yaml
  sensor:
@@ -48,18 +47,25 @@ and `0.0`, respectively:
      nordpool_entity: sensor.nordpool_kwh_fi_eur_3_095_024
      search_length: 10
      duration: 2
-     accept_level: 0.0
+     accept_cost: 0.0
+     accept_rate: 0.0
  ```
 
 `search_length` can be in the range of 2 to 24 and specifies how many hours ahead to serach for lowest price.
 
 `duration` specifies how large window in hours to slide forward in search for a minimum price.
 
-`accept_level` specifies a price level, that if an average over search window is below this value, is accepted and used. Even if not the lowest in the range specified.
+`accept_cost` specifies a price level, that if an average over search window is below this value, is accepted and used. Even if not the lowest in the range specified.
+
+`accept_rate` specifies a price rate, that if an average over search window / notdpool_average is below this rate, is accepted and used. Even if not the lowest in the range specified.
 
 ## Attributes
 
-Apart from the true/false if now is the time to turn on electricity usage the sensor provides an attribute `start_at` which tell when the next low-point starts
+Apart from the true/false if now is the time to turn on electricity usage the sensor provides some attributes.
+
+`starts_at` tell when the next low-point starts
+`cost_at` tell what the average cost is at the lowest point identified
+`now_cost_rate` tell a comparison average/np_average, the value `accept_rate` compares to
 
 ## Usage
 
