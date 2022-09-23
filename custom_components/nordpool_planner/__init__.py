@@ -4,7 +4,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import Config, HomeAssistant
 
 DOMAIN = "nordpool_planner"
-PLATFORMS = ["sensor"]
+PLATFORMS = ["binary_sensor"]
 
 
 async def async_setup(hass: HomeAssistant, config: Config) -> bool:

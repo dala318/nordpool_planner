@@ -4,7 +4,7 @@ from http.client import ACCEPTED
 import logging
 import voluptuous as vol
 import homeassistant.helpers.config_validation as cv
-from homeassistant.components.sensor import PLATFORM_SCHEMA, SensorEntity
+from homeassistant.components.binary_sensor import PLATFORM_SCHEMA, BinarySensorEntity
 from homeassistant.const import STATE_UNKNOWN
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -48,7 +48,7 @@ def setup_platform(
     )
 
 
-class NordpoolPlannerSensor(SensorEntity):
+class NordpoolPlannerSensor(BinarySensorEntity):
     _attr_icon = "mdi:flash"
 
     def __init__(self, nordpool_entity_id, search_length, duration, accept_rate):
@@ -60,7 +60,8 @@ class NordpoolPlannerSensor(SensorEntity):
         # https://developers.home-assistant.io/docs/entity_registry_index/ : Entities should not include the domain in
         # their Unique ID as the system already accounts for these identifiers:
         self._attr_unique_id = f"{duration}_{search_length}"
-        self._state = self._starts_in = STATE_UNKNOWN
+        self._state = STATE_UNKNOWN
+        self._starts_at = STATE_UNKNOWN
         self._cost_buffer = {}
 
     @property
@@ -70,15 +71,19 @@ class NordpoolPlannerSensor(SensorEntity):
     @property
     def extra_state_attributes(self):
         # TODO could also add self._nordpool_entity_id etc. useful properties here.
-        return {"starts_in": self._starts_in}
+        return {"starts_at": self._starts_at}  # self._starts_at
 
     def update(self):
         np = self.hass.states.get(self._nordpool_entity_id)
         if np is None:
-            _LOGGER.warning("Got empty data from Norpool entity %s ", self._nordpool_entity_id)
+            _LOGGER.warning(
+                "Got empty data from Norpool entity %s ", self._nordpool_entity_id
+            )
             return
-        if not np.attributes.has_key("today"):
-            _LOGGER.warning("No values for today in Norpool entity %s ", self._nordpool_entity_id)
+        if "today" not in np.attributes.keys():
+            _LOGGER.warning(
+                "No values for today in Norpool entity %s ", self._nordpool_entity_id
+            )
             return
         prices = np.attributes["today"]
         if np.attributes["tomorrow_valid"]:
@@ -96,7 +101,7 @@ class NordpoolPlannerSensor(SensorEntity):
             if len([[x for x in prince_range if x is not None]]) * 2 < len(prince_range):
                 _LOGGER.debug("Skipping range at %s as to many empty", i)
                 continue
-            prices = [x for x in prices if x is not None]
+            prince_range = [x for x in prince_range if x is not None]
             average = sum(prince_range) / self._duration
             if average < min_average:
                 min_average = average
@@ -109,13 +114,20 @@ class NordpoolPlannerSensor(SensorEntity):
 
         if now.hour > min_start_hour:
             self._state = True
-            self._starts_in = 0
         else:
             self._state = False
-            start = now
-            # Check if next day
-            if min_start_hour < 23:
-                start += dt.parse_duration("1 day")
-                min_start_hour -= 24
-            begin = dt.parse_datetime("%s-%s-%s %s:%s" % (start.year, start.month, start.day, min_start_hour, 0))
-            self._starts_in = begin - now
+
+        start = dt.parse_datetime(
+            "%s-%s-%s %s:%s" % (now.year, now.month, now.day, 0, 0)
+        )
+        # Check if next day
+        if min_start_hour >= 24:
+            start += dt.parse_duration("1 day")
+            min_start_hour -= 24
+        self._starts_at = "%04d-%02d-%02d %02d:%02d" % (
+            start.year,
+            start.month,
+            start.day,
+            min_start_hour,
+            0,
+        )
