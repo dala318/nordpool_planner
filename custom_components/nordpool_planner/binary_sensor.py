@@ -92,9 +92,9 @@ class NordpoolPlannerSensor(BinarySensorEntity):
         now = dt.now()
         min_average = 1000000000
         min_start_hour = now.hour
-        for i in range(
-            max(now.hour - self._duration, 0), len(prices) - self._search_length
-        ):
+        first_hour = max(now.hour - (self._duration - 1), 0)
+        last_hour = min(len(prices) - self._duration, now.hour + self._search_length)
+        for i in range(first_hour, last_hour):
             prince_range = prices[i : i + self._duration]
             # Nordpool sometimes returns null prices, https://github.com/custom-components/nordpool/issues/125
             # If 50% or more non-Null in range accept and use
@@ -112,7 +112,7 @@ class NordpoolPlannerSensor(BinarySensorEntity):
                 _LOGGER.debug("Found range under accept level at %s", i)
                 break
 
-        if now.hour > min_start_hour:
+        if now.hour >= min_start_hour:
             self._state = True
         else:
             self._state = False
