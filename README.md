@@ -5,12 +5,9 @@ Requires https://github.com/custom-components/nordpool
 > **NOTE**: This is a based on https://github.com/jpulakka/nordpool_diff
 
 [Nord Pool](https://www.nordpoolgroup.com/) gives you spot prices, but making good use of those prices is not easy.
-This component provides various a boolean if now is the right time to activate high consumption based on future prices
-in a specified range. Given a time-span from now and an number of hours forward it searches for the start-time that has the
-lowest average price over a specified duration window.
+This component provides various a boolean if now is the right time to activate high consumption based on future prices in a specified range. Given a time-span from now and an number of hours forward it searches for the start-time that has the lowest average price over a specified duration window.
 
-Apart from potentially saving some money, this kind of temporal shifting of consumption can also save the environment,
-because expensive peaks are produced by dirtier energy sources. Also helps solving Europe's electricity crisis.
+Apart from potentially saving some money, this kind of temporal shifting of consumption can also save the environment, because expensive peaks are produced by dirtier energy sources. Also helps solving Europe's electricity crisis.
 
 ## Installation
 
@@ -69,3 +66,5 @@ Apart from the true/false if now is the time to turn on electricity usage the se
 Some words should be said about the usage and how it behaves.
 
 The search length variable should be set to to a value within which you could accept no high electricity usage, and the ratio window/search should somewhat correspond to the active/passive time of your main user of electricity. Still, the search window for the optimal spot to electricity is moving along in front of corrent time, so there might be a longer duration of passive usage than the search length. Therefor keeping the search length low (3-5h) should likely be optimal, unless you have a large storage capacity of electricity/heat that can wait for a longer duration and when cheap electricity draw as much as possible.
+
+Try it and feedback how it works of if there are any improvment to be done!
