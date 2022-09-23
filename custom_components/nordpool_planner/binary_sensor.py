@@ -16,16 +16,28 @@ _LOGGER = logging.getLogger(__name__)
 NORDPOOL_ENTITY = "nordpool_entity"
 SEARCH_LENGTH = "search_length"
 DURATION = "duration"
+ACCEPT_COST = "accept_cost"
 ACCEPT_RATE = "accept_rate"
 
 # https://developers.home-assistant.io/docs/development_validation/
 # https://github.com/home-assistant/core/blob/dev/homeassistant/helpers/config_validation.py
-PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
-    vol.Required(NORDPOOL_ENTITY): cv.entity_id,
-    vol.Optional(SEARCH_LENGTH, default=10): vol.All(vol.Coerce(int), vol.Range(min=2, max=24)),
-    vol.Optional(DURATION, default=2): vol.All(vol.Coerce(int), vol.Range(min=1, max=5)),
-    vol.Optional(ACCEPT_RATE, default=0.0): vol.All(vol.Coerce(float), vol.Range(min=0.0, max=10000.0)),
-})
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
+    {
+        vol.Required(NORDPOOL_ENTITY): cv.entity_id,
+        vol.Optional(SEARCH_LENGTH, default=10): vol.All(
+            vol.Coerce(int), vol.Range(min=2, max=24)
+        ),
+        vol.Optional(DURATION, default=2): vol.All(
+            vol.Coerce(int), vol.Range(min=1, max=5)
+        ),
+        vol.Optional(ACCEPT_COST, default=0.0): vol.All(
+            vol.Coerce(float), vol.Range(min=0.0, max=10000.0)
+        ),
+        vol.Optional(ACCEPT_RATE, default=0.0): vol.All(
+            vol.Coerce(float), vol.Range(min=0.0, max=10000.0)
+        ),
+    }
+)
 
 
 def setup_platform(
@@ -37,12 +49,13 @@ def setup_platform(
     nordpool_entity_id = config[NORDPOOL_ENTITY]
     search_length = config[SEARCH_LENGTH]
     duration = config[DURATION]
+    accept_cost = config[ACCEPT_COST]
     accept_rate = config[ACCEPT_RATE]
 
     add_entities(
         [
             NordpoolPlannerSensor(
-                nordpool_entity_id, search_length, duration, accept_rate
+                nordpool_entity_id, search_length, duration, accept_cost, accept_rate
             )
         ]
     )
@@ -51,15 +64,20 @@ def setup_platform(
 class NordpoolPlannerSensor(BinarySensorEntity):
     _attr_icon = "mdi:flash"
 
-    def __init__(self, nordpool_entity_id, search_length, duration, accept_rate):
+    def __init__(
+        self, nordpool_entity_id, search_length, duration, accept_cost, accept_rate
+    ):
         self._nordpool_entity_id = nordpool_entity_id
         self._search_length = search_length
         self._duration = duration
+        self._accept_cost = accept_cost
         self._accept_rate = accept_rate
-        self._attr_name = f"nordpool_planner_{duration}_{search_length}"
+        self._attr_name = (
+            f"nordpool_planner_{duration}_{search_length}_{accept_cost}_{accept_rate}"
+        )
         # https://developers.home-assistant.io/docs/entity_registry_index/ : Entities should not include the domain in
         # their Unique ID as the system already accounts for these identifiers:
-        self._attr_unique_id = f"{duration}_{search_length}"
+        self._attr_unique_id = f"{duration}_{search_length}_{accept_cost}_{accept_rate}"
         self._state = STATE_UNKNOWN
         self._starts_at = STATE_UNKNOWN
         self._cost_at = STATE_UNKNOWN
@@ -93,30 +111,42 @@ class NordpoolPlannerSensor(BinarySensorEntity):
         prices = np.attributes["today"]
         if np.attributes["tomorrow_valid"]:
             prices += np.attributes["tomorrow"]
+        np_average = np.attributes["average"]
 
         now = dt.now()
-        min_average = 1000000000
+        min_average = np.attributes["current_price"]
         min_start_hour = now.hour
-        first_hour = max(now.hour - (self._duration - 1), 0)
-        last_hour = min(len(prices) - self._duration, now.hour + self._search_length)
-        for i in range(first_hour, last_hour):
-            prince_range = prices[i : i + self._duration]
-            # Nordpool sometimes returns null prices, https://github.com/custom-components/nordpool/issues/125
-            # If 50% or more non-Null in range accept and use
-            if len([[x for x in prince_range if x is not None]]) * 2 < len(prince_range):
-                _LOGGER.debug("Skipping range at %s as to many empty", i)
-                continue
-            prince_range = [x for x in prince_range if x is not None]
-            average = sum(prince_range) / self._duration
-            if average < min_average:
-                min_average = average
-                min_start_hour = i
-                _LOGGER.debug("New min value at %s", i)
-            if average < self._accept_rate:
-                min_average = average
-                min_start_hour = i
-                _LOGGER.debug("Found range under accept level at %s", i)
-                break
+        # Only search if current is above acceptable rates
+        if (
+            min_average > self._accept_cost
+            and (min_average / np_average) > self._accept_rate
+        ):
+            for i in range(
+                now.hour,
+                min(now.hour + self._search_length, len(prices) - self._duration),
+            ):
+                prince_range = prices[i : i + self._duration]
+                # Nordpool sometimes returns null prices, https://github.com/custom-components/nordpool/issues/125
+                # If 50% or more non-Null in range accept and use
+                if len([[x for x in prince_range if x is not None]]) * 2 > len(
+                    prince_range
+                ):
+                    _LOGGER.debug("Skipping range at %s as to many empty", i)
+                    continue
+                prince_range = [x for x in prince_range if x is not None]
+                average = sum(prince_range) / self._duration
+                if average < min_average:
+                    min_average = average
+                    min_start_hour = i
+                    _LOGGER.debug("New min value at %s", i)
+                if (
+                    average < self._accept_cost
+                    or (average / np_average) < self._accept_rate
+                ):
+                    min_average = average
+                    min_start_hour = i
+                    _LOGGER.debug("Found range under accept level at %s", i)
+                    break
 
         if now.hour >= min_start_hour:
             self._state = True
