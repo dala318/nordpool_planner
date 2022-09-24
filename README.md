@@ -46,12 +46,15 @@ Optional parameters to configure include `search_length`, `duration`, `accept_co
    - platform: nordpool_planner
      nordpool_entity: sensor.nordpool_kwh_fi_eur_3_095_024
      search_length: 10
+     var_search_length: sensor.need_electricity_within_h
      duration: 2
      accept_cost: 0.0
      accept_rate: 0.0
  ```
 
 `search_length` can be in the range of 2 to 24 and specifies how many hours ahead to serach for lowest price.
+
+`var_search_length` an entity that provides a numerical value in hours within which electricity is needed.
 
 `duration` specifies how large window in hours to slide forward in search for a minimum price.
 
