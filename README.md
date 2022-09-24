@@ -27,7 +27,7 @@ Apart from potentially saving some money, this kind of temporal shifting of cons
 4. Add the following to your `configuration.yaml` file:
 
     ```yaml
-    sensor:
+    binary_sensor:
       - platform: nordpool_planner
         nordpool_entity: sensor.nordpool_kwh_fi_eur_3_095_024
     ```
@@ -42,7 +42,7 @@ Apart from potentially saving some money, this kind of temporal shifting of cons
 Optional parameters to configure include `search_length`, `duration`, `accept_cost` and `accept_rate`, defaults are `10`, `2`, `0.0` and `0.0`, respectively:
 
  ```yaml
- sensor:
+ binary_sensor:
    - platform: nordpool_planner
      nordpool_entity: sensor.nordpool_kwh_fi_eur_3_095_024
      search_length: 10
