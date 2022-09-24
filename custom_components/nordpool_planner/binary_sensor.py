@@ -2,6 +2,8 @@ from __future__ import annotations
 from http.client import ACCEPTED
 
 import logging
+from sre_parse import State
+from typing import Any
 import voluptuous as vol
 import homeassistant.helpers.config_validation as cv
 from homeassistant.components.binary_sensor import PLATFORM_SCHEMA, BinarySensorEntity
@@ -15,9 +17,18 @@ _LOGGER = logging.getLogger(__name__)
 
 NORDPOOL_ENTITY = "nordpool_entity"
 SEARCH_LENGTH = "search_length"
+VAR_SEARCH_LENGTH = "var_search_length"
 DURATION = "duration"
 ACCEPT_COST = "accept_cost"
 ACCEPT_RATE = "accept_rate"
+
+
+def optional_entity_id(value: Any) -> str:
+    """Validate Entity ID if not Empty"""
+    if not value:
+        return ""
+    return cv.entity_id(value)
+
 
 # https://developers.home-assistant.io/docs/development_validation/
 # https://github.com/home-assistant/core/blob/dev/homeassistant/helpers/config_validation.py
@@ -27,6 +38,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
         vol.Optional(SEARCH_LENGTH, default=10): vol.All(
             vol.Coerce(int), vol.Range(min=2, max=24)
         ),
+        vol.Optional(VAR_SEARCH_LENGTH, default=""): optional_entity_id,
         vol.Optional(DURATION, default=2): vol.All(
             vol.Coerce(int), vol.Range(min=1, max=5)
         ),
@@ -48,6 +60,7 @@ def setup_platform(
 ) -> None:
     nordpool_entity_id = config[NORDPOOL_ENTITY]
     search_length = config[SEARCH_LENGTH]
+    var_search_length = config[VAR_SEARCH_LENGTH]
     duration = config[DURATION]
     accept_cost = config[ACCEPT_COST]
     accept_rate = config[ACCEPT_RATE]
@@ -55,7 +68,12 @@ def setup_platform(
     add_entities(
         [
             NordpoolPlannerSensor(
-                nordpool_entity_id, search_length, duration, accept_cost, accept_rate
+                nordpool_entity_id,
+                search_length,
+                var_search_length,
+                duration,
+                accept_cost,
+                accept_rate,
             )
         ]
     )
@@ -65,10 +83,17 @@ class NordpoolPlannerSensor(BinarySensorEntity):
     _attr_icon = "mdi:flash"
 
     def __init__(
-        self, nordpool_entity_id, search_length, duration, accept_cost, accept_rate
+        self,
+        nordpool_entity_id,
+        search_length,
+        var_search_length,
+        duration,
+        accept_cost,
+        accept_rate,
     ):
         self._nordpool_entity_id = nordpool_entity_id
         self._search_length = search_length
+        self._var_search_length = var_search_length
         self._duration = duration
         self._accept_cost = accept_cost
         self._accept_rate = accept_rate
@@ -96,6 +121,24 @@ class NordpoolPlannerSensor(BinarySensorEntity):
             "now_cost_rate": self._now_cost_rate,
         }
 
+    def _get_search_length(self) -> int:
+        search_length = self._search_length
+        if self._var_search_length:
+            input_search_length = self.hass.states.get(self._var_search_length)
+            if not input_search_length or not input_search_length.state[0].isdigit():
+                return search_length
+            try:
+                input_search_length = int(input_search_length.state.split(".")[0])
+                if input_search_length is not None:
+                    search_length = min(search_length, input_search_length)
+            except TypeError:
+                _LOGGER.debug(
+                    'Could not convert value "%s" of entity %s to int',
+                    input_search_length.state,
+                    self._var_search_length,
+                )
+        return search_length
+
     def update(self):
         np = self.hass.states.get(self._nordpool_entity_id)
         if np is None:
@@ -121,9 +164,10 @@ class NordpoolPlannerSensor(BinarySensorEntity):
             min_average > self._accept_cost
             and (min_average / np_average) > self._accept_rate
         ):
+            search_length = self._get_search_length()
             for i in range(
                 now.hour,
-                min(now.hour + self._search_length, len(prices) - self._duration),
+                min(now.hour + search_length, len(prices) - self._duration),
             ):
                 prince_range = prices[i : i + self._duration]
                 # Nordpool sometimes returns null prices, https://github.com/custom-components/nordpool/issues/125
