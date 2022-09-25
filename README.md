@@ -88,18 +88,14 @@ Try it and feedback how it works of if there are any improvment to be done!
 
 ### Tuning your settings
 
-I found it usefull to setup a simple history graph chart comparing the values from `nordpool`, `nordpool_diff` and `nordpool_panner` like this.
+I found it usefull to setup a simple history graph chart comparing the values from `nordpool`, `nordpool_diff` and `nordpool_planner` like this.
 
 ![image](planner_evaluation_chart.png)
 
 Where from top to bottom my named entities are:
 
 * nordpool_diff: duration 3 in search_length 10, accept_cost 2.0
-
 * nordpool_diff: duration 2 in search_lenth 5, accept_cost 2.0 and accept_rate 0.7
-
 * nordpool average: just a template sensor extracting the nordpool attribute average to an entity for easier tracking and comparisons "{{ state_attr('sensor.nordpool_kwh_se3_sek_3_10_025', 'average') | float }}"
-
 * nordpool
-
 * nordpool_diff: 
