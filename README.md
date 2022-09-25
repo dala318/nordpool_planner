@@ -43,7 +43,7 @@ Apart from potentially saving some money, this kind of temporal shifting of cons
 
 ## Optional parameters
 
-Optional parameters to configure include `search_length`, `var_search_length`, `duration`, `accept_cost` and `accept_rate`, defaults are `10`, `""`, `2`, `0.0` and `0.0`, respectively:
+Optional parameters to configure include `search_length`, `var_search_length`, `duration`, `accept_cost` and `accept_rate`, defaults are according to example below:
 
  ```yaml
  binary_sensor:
