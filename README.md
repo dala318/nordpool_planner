@@ -28,7 +28,7 @@ Apart from potentially saving some money, this kind of temporal shifting of cons
    
 ### Configuration
 
-*  Add the following to your `configuration.yaml` file:
+1. Add the following to your `configuration.yaml` file:
 
     ```yaml
     binary_sensor:
@@ -38,7 +38,7 @@ Apart from potentially saving some money, this kind of temporal shifting of cons
 
    Modify the `nordpool_entity` value according to your exact nordpool entity ID.
 
-*  Restart HA again to load the configuration. Now you should see `nordpool_planner_2_10_0_0_0_0` binary_sensor, where
+2. Restart HA again to load the configuration. Now you should see `nordpool_planner_2_10_0_0_0_0` binary_sensor, where
    the `2_10_0_0_0_0` part corresponds to default values of optional parameters, explained below.
 
 ## Optional parameters
