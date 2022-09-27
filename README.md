@@ -25,7 +25,7 @@ Apart from potentially saving some money, this kind of temporal shifting of cons
 2. Copy the `nordpool_planner` folder to HA `<config_dir>/custom_components/nordpool_planner/`
 3. Restart HA. (Skipping restarting before modifying configuration would give "Integration 'nordpool_diff' not found"
    error message from the configuration.)
-   
+
 ### Configuration
 
 1. Add the following to your `configuration.yaml` file:
@@ -43,14 +43,15 @@ Apart from potentially saving some money, this kind of temporal shifting of cons
 
 ## Optional parameters
 
-Optional parameters to configure include `search_length`, `var_search_length`, `duration`, `accept_cost` and `accept_rate`, defaults are according to example below:
+Optional parameters to configure include `search_length`, `entity_id`, `var_search_length_entity`, `duration`, `accept_cost` and `accept_rate`, defaults are according to example below (except `entity_id` and `var_search_length_entity` which is (empty) ""):
 
  ```yaml
  binary_sensor:
    - platform: nordpool_planner
      nordpool_entity: sensor.nordpool_kwh_fi_eur_3_095_024
+     entity_id: "heat house when cheap"
      search_length: 10
-     var_search_length: sensor.need_electricity_within_h
+     var_search_length_entity: sensor.need_electricity_within_h
      duration: 2
      accept_cost: 0.0
      accept_rate: 0.0
@@ -100,4 +101,4 @@ Where from top to bottom my named entities are:
 * nordpool_diff: duration 2 in search_lenth 5, accept_cost 2.0 and accept_rate 0.7
 * nordpool average: just a template sensor extracting the nordpool attribute average to an entity for easier tracking and comparisons "{{ state_attr('sensor.nordpool_kwh_se3_sek_3_10_025', 'average') | float }}"
 * nordpool
-* nordpool_diff: 
+* nordpool_diff:
