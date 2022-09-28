@@ -34,16 +34,35 @@ Apart from potentially saving some money, this kind of temporal shifting of cons
     binary_sensor:
       - platform: nordpool_planner
         nordpool_entity: sensor.nordpool_kwh_fi_eur_3_095_024
+        entity_id: activate_heating
+        planner_type: moving
     ```
 
-   Modify the `nordpool_entity` value according to your exact nordpool entity ID.
+   Modify the `nordpool_entity` value according to your exact nordpool entity ID, give the entity a describing name and select one of two planner types `moving` or `static`.
+
+   `moving` planner searches in a constant window in the future
+
+   `static` planner searches for an ammount of cheap hours until a set time
 
 2. Restart HA again to load the configuration. Now you should see `nordpool_planner_2_10_0_0_0_0` binary_sensor, where
    the `2_10_0_0_0_0` part corresponds to default values of optional parameters, explained below.
 
 ## Optional parameters
 
-Optional parameters to configure include `search_length`, `entity_id`, `var_search_length_entity`, `duration`, `accept_cost` and `accept_rate`, defaults are according to example below (except `entity_id` and `var_search_length_entity` which is (empty) ""):
+There are some optional parameters to provide to the sensor, they car be grouped in some categories.
+
+Generic optional: `duration` (2), `var_duration_entity` (<empty>), `accept_cost` (0.0) and `accept_rate` (0.0). Default values in parenthesis.
+
+The planner types has some additional confuration variables
+
+### Moving
+
+Optional parameters `search_length` (10), `var_search_length_entity` (<empty>). Default values in parenthesis.
+
+
+### Static
+
+Optional parameters `end_hour` (7), `var_end_hour_entity` (<empty>). Default values in parenthesis.
 
  ```yaml
  binary_sensor:

@@ -41,7 +41,20 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Required(NORDPOOL_ENTITY): cv.entity_id,
         vol.Required(ENTITY_ID): vol.All(vol.Coerce(str)),
-        vol.Optional(PLANNER_TYPE, default=MOVING): vol.In([MOVING, STATIC]),
+        vol.Required(PLANNER_TYPE): vol.In([MOVING, STATIC]),
+        # vol.Optional("moving"): {
+        #     cv.string: vol.Schema(
+        #         {
+        #             vol.Required(
+        #                 VAR_SEARCH_LENGTH_ENTITY, default=""
+        #             ): optional_entity_id,
+        #             vol.Optional(DURATION, default=2): vol.All(
+        #                 vol.Coerce(int), vol.Range(min=1, max=5)
+        #             ),
+        #         },
+        #         extra=vol.ALLOW_EXTRA,
+        #     )
+        # },
         vol.Optional(SEARCH_LENGTH, default=10): vol.All(
             vol.Coerce(int), vol.Range(min=2, max=24)
         ),
@@ -295,7 +308,7 @@ class NordpoolMovingPlannerSensor(NordpoolPlannerSensor):
         if self._np is not None:
             search_length = min(
                 self._get_input_entity_or_default(
-                    self._search_length, self._var_search_length
+                    self._var_search_length, self._search_length
                 ),
                 self._search_length,
             )
