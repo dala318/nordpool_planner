@@ -22,8 +22,8 @@ SEARCH_LENGTH = "search_length"
 VAR_SEARCH_LENGTH_ENTITY = "var_search_length_entity"
 DURATION = "duration"
 VAR_DURATION_ENTITY = "var_duration_entity"
-END_TIME = "end_time"
-VAR_END_TIME_ENTITY = "var_end_time_entity"
+END_HOUR = "end_hour"
+VAR_END_HOUR_ENTITY = "var_end_hour_entity"
 ACCEPT_COST = "accept_cost"
 ACCEPT_RATE = "accept_rate"
 
@@ -63,10 +63,10 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
             vol.Coerce(int), vol.Range(min=1, max=5)
         ),
         vol.Optional(VAR_DURATION_ENTITY, default=""): optional_entity_id,
-        vol.Optional(END_TIME, default=7): vol.All(
+        vol.Optional(END_HOUR, default=7): vol.All(
             vol.Coerce(int), vol.Range(min=0, max=23)
         ),
-        vol.Optional(VAR_END_TIME_ENTITY, default=""): optional_entity_id,
+        vol.Optional(VAR_END_HOUR_ENTITY, default=""): optional_entity_id,
         vol.Optional(ACCEPT_COST, default=0.0): vol.All(
             vol.Coerce(float), vol.Range(min=0.0, max=10000.0)
         ),
@@ -83,15 +83,15 @@ def setup_platform(
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
-    nordpool_entity_id = config[NORDPOOL_ENTITY]
+    nordpool_entity = config[NORDPOOL_ENTITY]
     entity_id = config[ENTITY_ID]
     planner_type = config[PLANNER_TYPE]
     search_length = config[SEARCH_LENGTH]
-    var_search_length_entity_id = config[VAR_SEARCH_LENGTH_ENTITY]
+    var_search_length_entity = config[VAR_SEARCH_LENGTH_ENTITY]
     duration = config[DURATION]
-    var_duration_entity_id = config[VAR_DURATION_ENTITY]
-    end_time = config[END_TIME]
-    var_end_time_entity_id = config[VAR_END_TIME_ENTITY]
+    var_duration_entity = config[VAR_DURATION_ENTITY]
+    end_hour = config[END_HOUR]
+    var_end_hour_entity = config[VAR_END_HOUR_ENTITY]
     accept_cost = config[ACCEPT_COST]
     accept_rate = config[ACCEPT_RATE]
 
@@ -100,11 +100,11 @@ def setup_platform(
             [
                 NordpoolMovingPlannerSensor(
                     search_length=search_length,
-                    var_search_length_entity_id=var_search_length_entity_id,
-                    nordpool_entity_id=nordpool_entity_id,
+                    var_search_length_entity=var_search_length_entity,
+                    nordpool_entity=nordpool_entity,
                     entity_id=entity_id,
                     duration=duration,
-                    var_duration_entity_id=var_duration_entity_id,
+                    var_duration_entity=var_duration_entity,
                     accept_cost=accept_cost,
                     accept_rate=accept_rate,
                 )
@@ -114,12 +114,12 @@ def setup_platform(
         add_entities(
             [
                 NordpoolStaticPlannerSensor(
-                    end_time=end_time,
-                    var_end_time_entity_id=var_end_time_entity_id,
-                    nordpool_entity_id=nordpool_entity_id,
+                    end_hour=end_hour,
+                    var_end_hour_entity=var_end_hour_entity,
+                    nordpool_entity=nordpool_entity,
                     entity_id=entity_id,
                     duration=duration,
-                    var_duration_entity_id=var_duration_entity_id,
+                    var_duration_entity=var_duration_entity,
                     accept_cost=accept_cost,
                     accept_rate=accept_rate,
                 )
@@ -134,17 +134,17 @@ class NordpoolPlannerSensor(BinarySensorEntity):
 
     def __init__(
         self,
-        nordpool_entity_id,
+        nordpool_entity,
         entity_id,
         duration,
-        var_duration_entity_id,
+        var_duration_entity,
         accept_cost,
         accept_rate,
     ):
         # Input configs
-        self._nordpool_entity_id = nordpool_entity_id
+        self._nordpool_entity = nordpool_entity
         self._duration = duration
-        self._var_duration_entity_id = var_duration_entity_id
+        self._var_duration_entity = var_duration_entity
         self._accept_cost = accept_cost
         self._accept_rate = accept_rate
 
@@ -184,15 +184,15 @@ class NordpoolPlannerSensor(BinarySensorEntity):
         }
 
     def _update_np_prices(self):
-        np = self.hass.states.get(self._nordpool_entity_id)
+        np = self.hass.states.get(self._nordpool_entity)
         if np is None:
             _LOGGER.warning(
-                "Got empty data from Norpool entity %s ", self._nordpool_entity_id
+                "Got empty data from Norpool entity %s ", self._nordpool_entity
             )
             return
         if "today" not in np.attributes.keys():
             _LOGGER.warning(
-                "No values for today in Norpool entity %s ", self._nordpool_entity_id
+                "No values for today in Norpool entity %s ", self._nordpool_entity
             )
             return
         self._np = np
@@ -241,7 +241,7 @@ class NordpoolPlannerSensor(BinarySensorEntity):
             and (min_average / self._np_average) > self._accept_rate
         ):
             duration = self._get_input_entity_or_default(
-                self._var_duration_entity_id, self._duration
+                self._var_duration_entity, self._duration
             )
             for i in range(
                 start_hour,
@@ -297,10 +297,10 @@ class NordpoolPlannerSensor(BinarySensorEntity):
 class NordpoolMovingPlannerSensor(NordpoolPlannerSensor):
     """Nordpool planner with moving search length"""
 
-    def __init__(self, search_length, var_search_length_entity_id, **kwds):
+    def __init__(self, search_length, var_search_length_entity, **kwds):
         super().__init__(**kwds)
         self._search_length = search_length
-        self._var_search_length = var_search_length_entity_id
+        self._var_search_length_entity = var_search_length_entity
 
     def update(self):
         """Called from Home Assistant to update entity value"""
@@ -308,7 +308,7 @@ class NordpoolMovingPlannerSensor(NordpoolPlannerSensor):
         if self._np is not None:
             search_length = min(
                 self._get_input_entity_or_default(
-                    self._var_search_length, self._search_length
+                    self._var_search_length_entity, self._search_length
                 ),
                 self._search_length,
             )
@@ -318,10 +318,10 @@ class NordpoolMovingPlannerSensor(NordpoolPlannerSensor):
 class NordpoolStaticPlannerSensor(NordpoolPlannerSensor):
     """Nordpool planner with fixed search length end time"""
 
-    def __init__(self, end_time, var_end_time_entity_id, **kwds):
+    def __init__(self, end_hour, var_end_hour_entity, **kwds):
         super().__init__(**kwds)
-        self._end_hour = end_time
-        self._var_end_hour_entity_id = var_end_time_entity_id
+        self._end_hour = end_hour
+        self._var_end_hour_entity = var_end_hour_entity
 
         # self._now_hour = dt.now().hour
         self._remaining = 0
@@ -334,7 +334,7 @@ class NordpoolStaticPlannerSensor(NordpoolPlannerSensor):
         #     self._now_hour = now.hour
         if self._np is not None:
             end_hour = self._get_input_entity_or_default(
-                self._var_end_hour_entity_id, self._end_hour
+                self._var_end_hour_entity, self._end_hour
             )
             if end_hour < now.hour:
                 end_hour += 24

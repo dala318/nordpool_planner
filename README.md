@@ -53,12 +53,41 @@ There are some optional parameters to provide to the sensor, they car be grouped
 
 Generic optional: `duration` (2), `var_duration_entity` (<empty>), `accept_cost` (0.0) and `accept_rate` (0.0). Default values in parenthesis.
 
+`duration` can be i nthe range of 1 to 5 and specifies how large window of censecutive hours to slide forward in search for a minimum average price.
+
+`var_duration_entity` an entity that provides a numerical value in hours.
+
+The integration will use `var_duration_entity` if supplied and can be interpreted as int, otherwise `duration` or the default value.
+
+`accept_cost` specifies a price level in the currency of your `nordpool_entity`, that if an average over a duration is below this value, is accepted and used. Even if not the lowest in the range specified.
+
+`accept_rate` specifies a price rate, that if an average over a `duration` nordpool_average (`nordpool_entity.attributes.average`) is below this rate, is accepted and used. Even if not the lowest in the range specified. E.g. if set to 1 an 'average over duration' <= 'nordpool average' is accepted. If 0.5 it has to be half the price of nordpool average. The idea is to not be as sensitive to offsets I price levels but just a generic rule to accept low section, not just the lowest.
+
 The planner types has some additional confuration variables
 
 ### Moving
 
 Optional parameters `search_length` (10), `var_search_length_entity` (<empty>). Default values in parenthesis.
 
+ ```yaml
+ binary_sensor:
+   - platform: nordpool_planner
+     nordpool_entity: sensor.nordpool_kwh_fi_eur_3_095_024
+     entity_id: "heat house when cheap"
+     planner_type: moving
+     search_length: 10
+     var_search_length_entity: input_number.look_this_far_ahead
+     duration: 2
+     var_duration_entity_id: sensor.needed_ammount_of_hors
+     accept_cost: 0.0
+     accept_rate: 0.0
+ ```
+
+`search_length` can be in the range of 2 to 24 and specifies how many hours ahead to serach for lowest price.
+
+`var_search_length_entity` an entity that provides a numerical value in hours.
+
+The integration will use minimum of `var_search_length_entity` (if supplied and can be interpreted as int) and `duration` (or the default value).
 
 ### Static
 
@@ -69,22 +98,21 @@ Optional parameters `end_hour` (7), `var_end_hour_entity` (<empty>). Default val
    - platform: nordpool_planner
      nordpool_entity: sensor.nordpool_kwh_fi_eur_3_095_024
      entity_id: "heat house when cheap"
-     search_length: 10
-     var_search_length_entity: sensor.need_electricity_within_h
+     planner_type: static
+     end_hour: 7
+     var_end_hour_entity: input_number.need_fully_charged_car_at
      duration: 2
+     var_duration_entity_id: sensor.estimated_charging_time
      accept_cost: 0.0
      accept_rate: 0.0
  ```
 
-`search_length` can be in the range of 2 to 24 and specifies how many hours ahead to serach for lowest price.
+`end_hour` can be in the range of 0 to 23 and specifies at what time within 24 hours the ammount of active hours shall be selected.
 
-`var_search_length` an entity that provides a numerical value in hours, used the same way as `search_length` but dynamic.
+`var_end_hour_entity` an entity that provides a numerical value in hours.
 
-`duration` can be i nthe range of 1 to 5 and specifies how large window of censecutive hours to slide forward in search for a minimum average price in the `search_window length`.
+The integration will use `var_end_hour_entity` if supplied and can be interpreted as int, otherwise `end_hour` or the default value.
 
-`accept_cost` specifies a price level in the currency of your `nordpool_entity`, that if an average over a duration is below this value, is accepted and used. Even if not the lowest in the range specified.
-
-`accept_rate` specifies a price rate, that if an average over a `duration` / nordpool_average (`nordpool_entity.attributes.average`) is below this rate, is accepted and used. Even if not the lowest in the range specified. E.g. if set to 1 an 'average over duration' <= 'nordpool average' is accepted. If 0.5 it has to be half the price of nordpool average. The idea is to not be as sensitive to offsets I price levels but just a generic rule to accept low section, not just the lowest.
 
 ## Attributes
 
