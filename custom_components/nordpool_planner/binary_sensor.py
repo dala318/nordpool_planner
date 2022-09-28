@@ -22,6 +22,8 @@ SEARCH_LENGTH = "search_length"
 VAR_SEARCH_LENGTH_ENTITY = "var_search_length_entity"
 DURATION = "duration"
 VAR_DURATION_ENTITY = "var_duration_entity"
+END_TIME = "end_time"
+VAR_END_TIME_ENTITY = "var_end_time_entity"
 ACCEPT_COST = "accept_cost"
 ACCEPT_RATE = "accept_rate"
 
@@ -48,6 +50,10 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
             vol.Coerce(int), vol.Range(min=1, max=5)
         ),
         vol.Optional(VAR_DURATION_ENTITY, default=""): optional_entity_id,
+        vol.Optional(END_TIME, default=7): vol.All(
+            vol.Coerce(int), vol.Range(min=0, max=23)
+        ),
+        vol.Optional(VAR_END_TIME_ENTITY, default=""): optional_entity_id,
         vol.Optional(ACCEPT_COST, default=0.0): vol.All(
             vol.Coerce(float), vol.Range(min=0.0, max=10000.0)
         ),
@@ -66,27 +72,46 @@ def setup_platform(
 ) -> None:
     nordpool_entity_id = config[NORDPOOL_ENTITY]
     entity_id = config[ENTITY_ID]
+    planner_type = config[PLANNER_TYPE]
     search_length = config[SEARCH_LENGTH]
     var_search_length_entity_id = config[VAR_SEARCH_LENGTH_ENTITY]
     duration = config[DURATION]
     var_duration_entity_id = config[VAR_DURATION_ENTITY]
+    end_time = config[END_TIME]
+    var_end_time_entity_id = config[VAR_END_TIME_ENTITY]
     accept_cost = config[ACCEPT_COST]
     accept_rate = config[ACCEPT_RATE]
 
-    add_entities(
-        [
-            NordpoolMovingPlannerSensor(
-                search_length=search_length,
-                var_search_length_entity_id=var_search_length_entity_id,
-                nordpool_entity_id=nordpool_entity_id,
-                entity_id=entity_id,
-                duration=duration,
-                var_duration_entity_id=var_duration_entity_id,
-                accept_cost=accept_cost,
-                accept_rate=accept_rate,
-            )
-        ]
-    )
+    if planner_type == MOVING:
+        add_entities(
+            [
+                NordpoolMovingPlannerSensor(
+                    search_length=search_length,
+                    var_search_length_entity_id=var_search_length_entity_id,
+                    nordpool_entity_id=nordpool_entity_id,
+                    entity_id=entity_id,
+                    duration=duration,
+                    var_duration_entity_id=var_duration_entity_id,
+                    accept_cost=accept_cost,
+                    accept_rate=accept_rate,
+                )
+            ]
+        )
+    elif planner_type == STATIC:
+        add_entities(
+            [
+                NordpoolStaticPlannerSensor(
+                    end_time=end_time,
+                    var_end_time_entity_id=var_end_time_entity_id,
+                    nordpool_entity_id=nordpool_entity_id,
+                    entity_id=entity_id,
+                    duration=duration,
+                    var_duration_entity_id=var_duration_entity_id,
+                    accept_cost=accept_cost,
+                    accept_rate=accept_rate,
+                )
+            ]
+        )
 
 
 class NordpoolPlannerSensor(BinarySensorEntity):
@@ -174,23 +199,22 @@ class NordpoolPlannerSensor(BinarySensorEntity):
     def _np_current(self):
         return self._np.attributes["current_price"]
 
-    def _get_duration(self) -> int:
-        duration = self._duration
-        if self._var_duration_entity_id:
-            input_duration = self.hass.states.get(self._var_duration_entity_id)
-            if not input_duration or not input_duration.state[0].isdigit():
-                return self._duration
+    def _get_input_entity_or_default(self, entity_id, default):
+        if entity_id:
+            input_value = self.hass.states.get(entity_id)
+            if not input_value or not input_value.state[0].isdigit():
+                return default
             try:
-                input_duration = int(input_duration.state.split(".")[0])
-                if input_duration is not None:
-                    return input_duration
+                input_value = int(input_value.state.split(".")[0])
+                if input_value is not None:
+                    return input_value
             except TypeError:
                 _LOGGER.debug(
                     'Could not convert value "%s" of entity %s to int',
-                    input_duration.state,
-                    self._var_duration_entity_id,
+                    input_value.state,
+                    entity_id,
                 )
-        return self._duration
+        return default
 
     def _update(self, start_hour, search_length: int):
         # Evaluate data
@@ -203,7 +227,9 @@ class NordpoolPlannerSensor(BinarySensorEntity):
             and min_average > self._accept_cost
             and (min_average / self._np_average) > self._accept_rate
         ):
-            duration = self._get_duration()
+            duration = self._get_input_entity_or_default(
+                self._var_duration_entity_id, self._duration
+            )
             for i in range(
                 start_hour,
                 min(now.hour + search_length, len(self._np_prices) - duration),
@@ -267,45 +293,36 @@ class NordpoolMovingPlannerSensor(NordpoolPlannerSensor):
         """Called from Home Assistant to update entity value"""
         self._update_np_prices()
         if self._np is not None:
-            search_length = self._search_length
-            if self._var_search_length:
-                input_search_length = self.hass.states.get(self._var_search_length)
-                if (
-                    not input_search_length
-                    or not input_search_length.state[0].isdigit()
-                ):
-                    return search_length
-                try:
-                    input_search_length = int(input_search_length.state.split(".")[0])
-                    if input_search_length is not None:
-                        search_length = min(search_length, input_search_length)
-                except TypeError:
-                    _LOGGER.debug(
-                        'Could not convert value "%s" of entity %s to int',
-                        input_search_length.state,
-                        self._var_search_length,
-                    )
+            search_length = min(
+                self._get_input_entity_or_default(
+                    self._search_length, self._var_search_length
+                ),
+                self._search_length,
+            )
             self._update(dt.now().hour, search_length)
 
 
-class NordpoolFixedPlannerSensor(NordpoolPlannerSensor):
+class NordpoolStaticPlannerSensor(NordpoolPlannerSensor):
     """Nordpool planner with fixed search length end time"""
 
-    def __init__(self, end_hour, **kwds):
+    def __init__(self, end_time, var_end_time_entity_id, **kwds):
         super().__init__(**kwds)
-        self._end_hour = end_hour
+        self._end_hour = end_time
+        self._var_end_hour_entity_id = var_end_time_entity_id
 
-        self._now_hour = dt.now().hour
+        # self._now_hour = dt.now().hour
         self._remaining = 0
 
     def update(self):
         """Called from Home Assistant to update entity value"""
         self._update_np_prices()
         now = dt.now()
-        if self._now_hour == now.hour + 1:
-            self._now_hour = now.hour
+        # if self._now_hour == now.hour + 1:
+        #     self._now_hour = now.hour
         if self._np is not None:
-            end_hour = self._end_hour
+            end_hour = self._get_input_entity_or_default(
+                self._var_end_hour_entity_id, self._end_hour
+            )
             if end_hour < now.hour:
                 end_hour += 24
             self._update(now.hour, end_hour - now.hour)
