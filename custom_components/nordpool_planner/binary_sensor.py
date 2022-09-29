@@ -59,16 +59,14 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
         ),
         # Moving planner exclusives
         vol.Exclusive(MOVING, TYPE_GROUP, msg=TYPE_DUPLICATE_MSG): {
-            vol.Required(SEARCH_LENGTH, default=10): vol.All(
+            vol.Required(SEARCH_LENGTH): vol.All(
                 vol.Coerce(int), vol.Range(min=2, max=24)
             ),
             vol.Optional(VAR_SEARCH_LENGTH_ENTITY, default=""): optional_entity_id,
         },
         # Static planner exclusive
         vol.Exclusive(STATIC, TYPE_GROUP, msg=TYPE_DUPLICATE_MSG): {
-            vol.Required(END_HOUR, default=7): vol.All(
-                vol.Coerce(int), vol.Range(min=0, max=23)
-            ),
+            vol.Required(END_HOUR): vol.All(vol.Coerce(int), vol.Range(min=0, max=23)),
             vol.Optional(VAR_END_HOUR_ENTITY, default=""): optional_entity_id,
             vol.Optional(SPLIT_HOURS, default=False): vol.Coerce(bool),
         },

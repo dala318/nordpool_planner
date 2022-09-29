@@ -35,8 +35,15 @@ Apart from potentially saving some money, this kind of temporal shifting of cons
       - platform: nordpool_planner
         nordpool_entity: sensor.nordpool_kwh_fi_eur_3_095_024
         entity_id: activate_heating
-        planner_type: moving
+
+        moving:
+          search_length: 8
+        <or>
+        static:
+          end_hour: 7
     ```
+
+   Exclusively either of `moving` or `static` shall be specified, determines the behavior of hte sensor. See further down about usage.
 
    Modify the `nordpool_entity` value according to your exact nordpool entity ID, give the entity a describing name and select one of two planner types `moving` or `static`.
 
@@ -67,20 +74,20 @@ The planner types has some additional confuration variables
 
 ### Moving
 
-Optional parameters `search_length` (10), `var_search_length_entity` (<empty>). Default values in parenthesis.
+Optional parameter `var_search_length_entity` (<empty>). Default value in parenthesis.
 
  ```yaml
  binary_sensor:
    - platform: nordpool_planner
      nordpool_entity: sensor.nordpool_kwh_fi_eur_3_095_024
      entity_id: "heat house when cheap"
-     planner_type: moving
-     search_length: 10
-     var_search_length_entity: input_number.look_this_far_ahead
      duration: 2
      var_duration_entity_id: sensor.needed_ammount_of_hors
      accept_cost: 0.0
      accept_rate: 0.0
+     moving:
+      search_length: 10
+      var_search_length_entity: input_number.look_this_far_ahead
  ```
 
 `search_length` can be in the range of 2 to 24 and specifies how many hours ahead to serach for lowest price.
@@ -91,20 +98,24 @@ The integration will use minimum of `var_search_length_entity` (if supplied and 
 
 ### Static
 
-Optional parameters `end_hour` (7), `var_end_hour_entity` (<empty>). Default values in parenthesis.
+> **WORK IN PROGRESS**: This version of entity is still not completed, has limitation is that it does not account for hours already used.
+
+
+Optional parameters `var_end_hour_entity` (<empty>) and `split_hours` (false). Default values in parenthesis.
 
  ```yaml
  binary_sensor:
    - platform: nordpool_planner
      nordpool_entity: sensor.nordpool_kwh_fi_eur_3_095_024
      entity_id: "heat house when cheap"
-     planner_type: static
-     end_hour: 7
-     var_end_hour_entity: input_number.need_fully_charged_car_at
      duration: 2
      var_duration_entity_id: sensor.estimated_charging_time
      accept_cost: 0.0
      accept_rate: 0.0
+     static:
+      end_hour: 7
+      var_end_hour_entity: input_number.need_fully_charged_car_at
+      split_hours: false
  ```
 
 `end_hour` can be in the range of 0 to 23 and specifies at what time within 24 hours the ammount of active hours shall be selected.
@@ -112,6 +123,9 @@ Optional parameters `end_hour` (7), `var_end_hour_entity` (<empty>). Default val
 `var_end_hour_entity` an entity that provides a numerical value in hours.
 
 The integration will use `var_end_hour_entity` if supplied and can be interpreted as int, otherwise `end_hour` or the default value.
+
+> **NOT IMPLEMENTED**: No support implemented to use this setting
+`split_hours` tell if allowed to find low-cost hours that are not censecutive
 
 
 ## Attributes
