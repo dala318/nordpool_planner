@@ -107,7 +107,7 @@ def setup_platform(
                 )
             ]
         )
-    elif STATIC in config.keys():
+    if STATIC in config.keys():
         end_hour = config[STATIC][END_HOUR]
         var_end_hour_entity = config[STATIC][VAR_END_HOUR_ENTITY]
         split_hours = config[STATIC][SPLIT_HOURS]
@@ -126,8 +126,6 @@ def setup_platform(
                 )
             ]
         )
-    else:
-        raise
 
 
 class NordpoolPlannerSensor(BinarySensorEntity):
