@@ -1,4 +1,5 @@
 from __future__ import annotations
+from email.policy import default
 
 import logging
 from typing import Any
@@ -24,8 +25,12 @@ DURATION = "duration"
 VAR_DURATION_ENTITY = "var_duration_entity"
 END_HOUR = "end_hour"
 VAR_END_HOUR_ENTITY = "var_end_hour_entity"
+SPLIT_HOURS = "split_hours"
 ACCEPT_COST = "accept_cost"
 ACCEPT_RATE = "accept_rate"
+TYPE_GROUP = "type"
+TYPE_DUPLICATE_MSG = f'One entity can only be one of "{MOVING}" and "{STATIC}", please remove either or split in two entities.'
+TYPE_MISSING_MSG = f'One of "{MOVING}" and "{STATIC}" must be spcified'
 
 
 def optional_entity_id(value: Any) -> str:
@@ -41,39 +46,39 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Required(NORDPOOL_ENTITY): cv.entity_id,
         vol.Required(ENTITY_ID): vol.All(vol.Coerce(str)),
-        vol.Required(PLANNER_TYPE): vol.In([MOVING, STATIC]),
-        # vol.Optional("moving"): {
-        #     cv.string: vol.Schema(
-        #         {
-        #             vol.Required(
-        #                 VAR_SEARCH_LENGTH_ENTITY, default=""
-        #             ): optional_entity_id,
-        #             vol.Optional(DURATION, default=2): vol.All(
-        #                 vol.Coerce(int), vol.Range(min=1, max=5)
-        #             ),
-        #         },
-        #         extra=vol.ALLOW_EXTRA,
-        #     )
-        # },
-        vol.Optional(SEARCH_LENGTH, default=10): vol.All(
-            vol.Coerce(int), vol.Range(min=2, max=24)
-        ),
-        vol.Optional(VAR_SEARCH_LENGTH_ENTITY, default=""): optional_entity_id,
         vol.Optional(DURATION, default=2): vol.All(
-            vol.Coerce(int), vol.Range(min=1, max=5)
+            vol.Coerce(int),
+            vol.Range(min=1, max=5),
         ),
         vol.Optional(VAR_DURATION_ENTITY, default=""): optional_entity_id,
-        vol.Optional(END_HOUR, default=7): vol.All(
-            vol.Coerce(int), vol.Range(min=0, max=23)
-        ),
-        vol.Optional(VAR_END_HOUR_ENTITY, default=""): optional_entity_id,
         vol.Optional(ACCEPT_COST, default=0.0): vol.All(
             vol.Coerce(float), vol.Range(min=0.0, max=10000.0)
         ),
         vol.Optional(ACCEPT_RATE, default=0.0): vol.All(
             vol.Coerce(float), vol.Range(min=0.0, max=10000.0)
         ),
-    }
+        # Moving planner exclusives
+        vol.Exclusive(MOVING, TYPE_GROUP, msg=TYPE_DUPLICATE_MSG): {
+            vol.Required(SEARCH_LENGTH, default=10): vol.All(
+                vol.Coerce(int), vol.Range(min=2, max=24)
+            ),
+            vol.Optional(VAR_SEARCH_LENGTH_ENTITY, default=""): optional_entity_id,
+        },
+        # Static planner exclusive
+        vol.Exclusive(STATIC, TYPE_GROUP, msg=TYPE_DUPLICATE_MSG): {
+            vol.Required(END_HOUR, default=7): vol.All(
+                vol.Coerce(int), vol.Range(min=0, max=23)
+            ),
+            vol.Optional(VAR_END_HOUR_ENTITY, default=""): optional_entity_id,
+            vol.Optional(SPLIT_HOURS, default=False): vol.Coerce(bool),
+        },
+        vol.Required(
+            vol.Any(MOVING, STATIC),
+            msg=TYPE_MISSING_MSG,
+        ): object
+        # vol.Any(vol.Required(MOVING), vol.Required(STATIC)),
+    },
+    # extra=vol.ALLOW_EXTRA,
 )
 
 
@@ -85,17 +90,13 @@ def setup_platform(
 ) -> None:
     nordpool_entity = config[NORDPOOL_ENTITY]
     entity_id = config[ENTITY_ID]
-    planner_type = config[PLANNER_TYPE]
-    search_length = config[SEARCH_LENGTH]
-    var_search_length_entity = config[VAR_SEARCH_LENGTH_ENTITY]
     duration = config[DURATION]
     var_duration_entity = config[VAR_DURATION_ENTITY]
-    end_hour = config[END_HOUR]
-    var_end_hour_entity = config[VAR_END_HOUR_ENTITY]
     accept_cost = config[ACCEPT_COST]
     accept_rate = config[ACCEPT_RATE]
-
-    if planner_type == MOVING:
+    if MOVING in config.keys():
+        search_length = config[MOVING][SEARCH_LENGTH]
+        var_search_length_entity = config[MOVING][VAR_SEARCH_LENGTH_ENTITY]
         add_entities(
             [
                 NordpoolMovingPlannerSensor(
@@ -110,7 +111,10 @@ def setup_platform(
                 )
             ]
         )
-    elif planner_type == STATIC:
+    elif STATIC in config.keys():
+        end_hour = config[STATIC][END_HOUR]
+        var_end_hour_entity = config[STATIC][VAR_END_HOUR_ENTITY]
+        split_hours = config[STATIC][SPLIT_HOURS]
         add_entities(
             [
                 NordpoolStaticPlannerSensor(
@@ -120,11 +124,14 @@ def setup_platform(
                     entity_id=entity_id,
                     duration=duration,
                     var_duration_entity=var_duration_entity,
+                    split_hours=split_hours,
                     accept_cost=accept_cost,
                     accept_rate=accept_rate,
                 )
             ]
         )
+    else:
+        raise
 
 
 class NordpoolPlannerSensor(BinarySensorEntity):
@@ -318,12 +325,14 @@ class NordpoolMovingPlannerSensor(NordpoolPlannerSensor):
 class NordpoolStaticPlannerSensor(NordpoolPlannerSensor):
     """Nordpool planner with fixed search length end time"""
 
-    def __init__(self, end_hour, var_end_hour_entity, **kwds):
+    def __init__(self, end_hour, var_end_hour_entity, split_hours, **kwds):
         super().__init__(**kwds)
         self._end_hour = end_hour
         self._var_end_hour_entity = var_end_hour_entity
+        self._split_hours = split_hours
 
         # self._now_hour = dt.now().hour
+        self._produced_hours = 0
         self._remaining = 0
 
     def update(self):
