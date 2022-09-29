@@ -1,5 +1,4 @@
 from __future__ import annotations
-from email.policy import default
 
 import logging
 from typing import Any
@@ -70,13 +69,12 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
             vol.Optional(VAR_END_HOUR_ENTITY, default=""): optional_entity_id,
             vol.Optional(SPLIT_HOURS, default=False): vol.Coerce(bool),
         },
+        # Check not both variants in same
         vol.Required(
             vol.Any(MOVING, STATIC),
             msg=TYPE_MISSING_MSG,
-        ): object
-        # vol.Any(vol.Required(MOVING), vol.Required(STATIC)),
+        ): object,
     },
-    # extra=vol.ALLOW_EXTRA,
 )
 
 
@@ -154,17 +152,9 @@ class NordpoolPlannerSensor(BinarySensorEntity):
         self._accept_rate = accept_rate
 
         # Entity identification
-        # if entity_id:
         entity_id = entity_id.replace(" ", "_")
         self._attr_name = f"nordpool_planner_{entity_id}"
         self._attr_unique_id = entity_id
-        # else:
-        #     self._attr_name = f"nordpool_planner_{duration}_{search_length}_{accept_cost}_{accept_rate}"
-        #     # https://developers.home-assistant.io/docs/entity_registry_index/ : Entities should not include the domain in
-        #     # their Unique ID as the system already accounts for these identifiers:
-        #     self._attr_unique_id = (
-        #         f"{duration}_{search_length}_{accept_cost}_{accept_rate}"
-        #     )
 
         # Internal state
         self._np = None
@@ -174,10 +164,6 @@ class NordpoolPlannerSensor(BinarySensorEntity):
         self._starts_at = STATE_UNKNOWN
         self._cost_at = STATE_UNKNOWN
         self._now_cost_rate = STATE_UNKNOWN
-
-    # @property
-    # def state(self):
-    #     return self._attr_is_on
 
     @property
     def extra_state_attributes(self):
@@ -329,6 +315,7 @@ class NordpoolStaticPlannerSensor(NordpoolPlannerSensor):
         self._var_end_hour_entity = var_end_hour_entity
         self._split_hours = split_hours
 
+        # TODO: Need to add logic to handle counting used hours
         # self._now_hour = dt.now().hour
         self._produced_hours = 0
         self._remaining = 0
