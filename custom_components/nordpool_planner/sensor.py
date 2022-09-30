@@ -3,7 +3,11 @@ from __future__ import annotations
 from typing import Any
 import voluptuous as vol
 import homeassistant.helpers.config_validation as cv
-from homeassistant.components.binary_sensor import PLATFORM_SCHEMA, BinarySensorEntity
+from homeassistant.components.sensor import (
+    PLATFORM_SCHEMA,
+    SensorEntity,
+    SensorDeviceClass,
+)
 from homeassistant.const import STATE_UNKNOWN
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -69,10 +73,10 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
             vol.Optional(SPLIT_HOURS, default=False): vol.Coerce(bool),
         },
         # Check not both variants in same
-        # vol.Required(
-        #     vol.Any(MOVING, STATIC),
-        #     msg=TYPE_MISSING_MSG,
-        # ): object,
+        vol.Required(
+            vol.Any(MOVING, STATIC),
+            msg=TYPE_MISSING_MSG,
+        ): object,
     },
 )
 
@@ -89,30 +93,30 @@ def setup_platform(
     var_duration_entity = config[VAR_DURATION_ENTITY]
     accept_cost = config[ACCEPT_COST]
     accept_rate = config[ACCEPT_RATE]
-    if MOVING in config.keys():
-        search_length = config[MOVING][SEARCH_LENGTH]
-        var_search_length_entity = config[MOVING][VAR_SEARCH_LENGTH_ENTITY]
-        add_entities(
-            [
-                NordpoolPlannerMovingBinarySensor(
-                    search_length=search_length,
-                    var_search_length_entity=var_search_length_entity,
-                    nordpool_entity=nordpool_entity,
-                    entity_id=entity_id,
-                    duration=duration,
-                    var_duration_entity=var_duration_entity,
-                    accept_cost=accept_cost,
-                    accept_rate=accept_rate,
-                )
-            ]
-        )
+    # if MOVING in config.keys():
+    #     search_length = config[MOVING][SEARCH_LENGTH]
+    #     var_search_length_entity = config[MOVING][VAR_SEARCH_LENGTH_ENTITY]
+    #     add_entities(
+    #         [
+    #             NordpoolPlannerMovingSensor(
+    #                 search_length=search_length,
+    #                 var_search_length_entity=var_search_length_entity,
+    #                 nordpool_entity=nordpool_entity,
+    #                 entity_id=entity_id,
+    #                 duration=duration,
+    #                 var_duration_entity=var_duration_entity,
+    #                 accept_cost=accept_cost,
+    #                 accept_rate=accept_rate,
+    #             )
+    #         ]
+    #     )
     if STATIC in config.keys():
         end_hour = config[STATIC][END_HOUR]
         var_end_hour_entity = config[STATIC][VAR_END_HOUR_ENTITY]
         split_hours = config[STATIC][SPLIT_HOURS]
         add_entities(
             [
-                NordpoolPlannerStaticBinarySensor(
+                NordpoolPlannerStaticSensor(
                     end_hour=end_hour,
                     var_end_hour_entity=var_end_hour_entity,
                     nordpool_entity=nordpool_entity,
@@ -127,28 +131,28 @@ def setup_platform(
         )
 
 
-class NordpoolPlannerMovingBinarySensor(NordpoolPlannerEntity, BinarySensorEntity):
-    """Nordpool planner with moving search length"""
+# class NordpoolPlannerMovingSensor(NordpoolPlannerEntity, SensorEntity):
+#     """Nordpool planner with moving search length"""
 
-    def __init__(self, search_length, var_search_length_entity, **kwds):
-        super().__init__(**kwds)
-        self._search_length = search_length
-        self._var_search_length_entity = var_search_length_entity
+#     def __init__(self, search_length, var_search_length_entity, **kwds):
+#         super().__init__(**kwds)
+#         self._search_length = search_length
+#         self._var_search_length_entity = var_search_length_entity
 
-    def update(self):
-        """Called from Home Assistant to update entity value"""
-        self._update_np_prices()
-        if self._np is not None:
-            search_length = min(
-                self._get_input_entity_or_default(
-                    self._var_search_length_entity, self._search_length
-                ),
-                self._search_length,
-            )
-            self._update(dt.now().hour, search_length)
+#     def update(self):
+#         """Called from Home Assistant to update entity value"""
+#         self._update_np_prices()
+#         if self._np is not None:
+#             search_length = min(
+#                 self._get_input_entity_or_default(
+#                     self._var_search_length_entity, self._search_length
+#                 ),
+#                 self._search_length,
+#             )
+#             self._update(dt.now().hour, search_length)
 
 
-class NordpoolPlannerStaticBinarySensor(NordpoolPlannerEntity, BinarySensorEntity):
+class NordpoolPlannerStaticSensor(NordpoolPlannerEntity, SensorEntity):
     """Nordpool planner with fixed search length end time"""
 
     def __init__(self, end_hour, var_end_hour_entity, split_hours, **kwds):
@@ -156,6 +160,10 @@ class NordpoolPlannerStaticBinarySensor(NordpoolPlannerEntity, BinarySensorEntit
         self._end_hour = end_hour
         self._var_end_hour_entity = var_end_hour_entity
         self._split_hours = split_hours
+
+        # self.native_unit_of_measurement = STATE_UNKNOWN
+        # self.unit_of_measurement = STATE_UNKNOWN
+        self.device_class = SensorDeviceClass.DATE
 
         # TODO: Need to add logic to handle counting used hours
         # self._now_hour = dt.now().hour
