@@ -313,21 +313,38 @@ class NordpoolStaticPlannerSensor(NordpoolPlannerSensor):
         self._var_end_hour_entity = var_end_hour_entity
         self._split_hours = split_hours
 
-        # TODO: Need to add logic to handle counting used hours
-        # self._now_hour = dt.now().hour
-        self._produced_hours = 0
-        self._remaining = 0
+        self._now_hour = dt.now().hour
+        self._remaining = self._get_input_entity_or_default(
+            self._var_duration_entity, self._duration
+        )
 
     def update(self):
         """Called from Home Assistant to update entity value"""
         self._update_np_prices()
         now = dt.now()
-        # if self._now_hour == now.hour + 1:
-        #     self._now_hour = now.hour
-        if self._np is not None:
-            end_hour = self._get_input_entity_or_default(
-                self._var_end_hour_entity, self._end_hour
-            )
-            if end_hour < now.hour:
-                end_hour += 24
-            self._update(now.hour, end_hour - now.hour)
+        end_hour = self._get_input_entity_or_default(
+            self._var_end_hour_entity, self._end_hour
+        )
+
+        # Start by checking if hour has changed
+        if self._now_hour != now.hour:
+            # Reset needed hours as end has been reached
+            if now.hour == end_hour:
+                self._remaining = self._get_input_entity_or_default(
+                    self._var_duration_entity, self._duration
+                )
+            # Else-if since don't want to risk to remove one directly
+            elif self._attr_is_on:
+                self._remaining -= 1
+        self._now_hour = now.hour
+
+        if self._remaining == 0:
+            self._attr_is_on = False
+            self._starts_at = None
+            self._cost_at = None
+            self._now_cost_rate = None
+        else:
+            if self._np is not None:
+                if end_hour < now.hour:
+                    end_hour += 24
+                self._update(now.hour, end_hour - now.hour)
