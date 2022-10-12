@@ -25,7 +25,7 @@ Apart from potentially saving some money, this kind of temporal shifting of cons
 2. Copy the `nordpool_planner` folder to HA `<config_dir>/custom_components/nordpool_planner/`
 3. Restart HA. (Skipping restarting before modifying configuration would give "Integration 'nordpool_diff' not found"
    error message from the configuration.)
-   
+
 ### Configuration
 
 1. Add the following to your `configuration.yaml` file:
@@ -34,37 +34,99 @@ Apart from potentially saving some money, this kind of temporal shifting of cons
     binary_sensor:
       - platform: nordpool_planner
         nordpool_entity: sensor.nordpool_kwh_fi_eur_3_095_024
+        entity_id: activate_heating
+
+        moving:
+          search_length: 8
+        <or>
+        static:
+          end_hour: 7
     ```
 
-   Modify the `nordpool_entity` value according to your exact nordpool entity ID.
+   Exclusively either of `moving` or `static` shall be specified, determines the behavior of hte sensor. See further down about usage.
+
+   Modify the `nordpool_entity` value according to your exact nordpool entity ID, give the entity a describing name and select one of two planner types `moving` or `static`.
+
+   `moving` planner searches in a constant window in the future
+
+   `static` planner searches for an ammount of cheap hours until a set time
 
 2. Restart HA again to load the configuration. Now you should see `nordpool_planner_2_10_0_0_0_0` binary_sensor, where
    the `2_10_0_0_0_0` part corresponds to default values of optional parameters, explained below.
 
 ## Optional parameters
 
-Optional parameters to configure include `search_length`, `var_search_length`, `duration`, `accept_cost` and `accept_rate`, defaults are according to example below:
+There are some optional parameters to provide to the sensor, they car be grouped in some categories.
+
+Generic optional: `duration` (2), `var_duration_entity` (""), `accept_cost` (0.0) and `accept_rate` (0.0). Default values in parenthesis.
+
+`duration` can be i nthe range of 1 to 5 and specifies how large window of censecutive hours to slide forward in search for a minimum average price.
+
+`var_duration_entity` an entity that provides a numerical value in hours.
+
+The integration will use `var_duration_entity` if supplied and can be interpreted as int, otherwise `duration` or the default value.
+
+`accept_cost` specifies a price level in the currency of your `nordpool_entity`, that if an average over a duration is below this value, is accepted and used. Even if not the lowest in the range specified.
+
+`accept_rate` specifies a price rate, that if an average over a `duration` nordpool_average (`nordpool_entity.attributes.average`) is below this rate, is accepted and used. Even if not the lowest in the range specified. E.g. if set to 1 an 'average over duration' <= 'nordpool average' is accepted. If 0.5 it has to be half the price of nordpool average. The idea is to not be as sensitive to offsets I price levels but just a generic rule to accept low section, not just the lowest.
+
+The planner types has some additional confuration variables
+
+### Moving
+
+Optional parameter `var_search_length_entity` (""). Default value in parenthesis.
 
  ```yaml
  binary_sensor:
    - platform: nordpool_planner
      nordpool_entity: sensor.nordpool_kwh_fi_eur_3_095_024
-     search_length: 10
-     var_search_length: sensor.need_electricity_within_h
+     entity_id: "heat house when cheap"
      duration: 2
+     var_duration_entity_id: sensor.needed_ammount_of_hors
      accept_cost: 0.0
      accept_rate: 0.0
+     moving:
+      search_length: 10
+      var_search_length_entity: input_number.look_this_far_ahead
  ```
 
 `search_length` can be in the range of 2 to 24 and specifies how many hours ahead to serach for lowest price.
 
-`var_search_length` an entity that provides a numerical value in hours, used the same way as `search_length` but dynamic.
+`var_search_length_entity` an entity that provides a numerical value in hours.
 
-`duration` can be i nthe range of 1 to 5 and specifies how large window of censecutive hours to slide forward in search for a minimum average price in the `search_window length`.
+The integration will use minimum of `var_search_length_entity` (if supplied and can be interpreted as int) and `duration` (or the default value).
 
-`accept_cost` specifies a price level in the currency of your `nordpool_entity`, that if an average over a duration is below this value, is accepted and used. Even if not the lowest in the range specified.
+### Static
 
-`accept_rate` specifies a price rate, that if an average over a `duration` / nordpool_average (`nordpool_entity.attributes.average`) is below this rate, is accepted and used. Even if not the lowest in the range specified. E.g. if set to 1 an 'average over duration' <= 'nordpool average' is accepted. If 0.5 it has to be half the price of nordpool average. The idea is to not be as sensitive to offsets I price levels but just a generic rule to accept low section, not just the lowest.
+> **WORK IN PROGRESS**: This version of entity is still not completed, has limitation is that it does not account for hours already used.
+
+
+Optional parameters `var_end_hour_entity` ("") and `split_hours` (false). Default values in parenthesis.
+
+ ```yaml
+ binary_sensor:
+   - platform: nordpool_planner
+     nordpool_entity: sensor.nordpool_kwh_fi_eur_3_095_024
+     entity_id: "heat house when cheap"
+     duration: 2
+     var_duration_entity_id: sensor.estimated_charging_time
+     accept_cost: 0.0
+     accept_rate: 0.0
+     static:
+      end_hour: 7
+      var_end_hour_entity: input_number.need_fully_charged_car_at
+      split_hours: false
+ ```
+
+`end_hour` can be in the range of 0 to 23 and specifies at what time within 24 hours the ammount of active hours shall be selected.
+
+`var_end_hour_entity` an entity that provides a numerical value in hours.
+
+The integration will use `var_end_hour_entity` if supplied and can be interpreted as int, otherwise `end_hour` or the default value.
+
+> **NOT IMPLEMENTED**: No support implemented to use this setting
+`split_hours` tell if allowed to find low-cost hours that are not censecutive
+
 
 ## Attributes
 
@@ -100,4 +162,4 @@ Where from top to bottom my named entities are:
 * nordpool_diff: duration 2 in search_lenth 5, accept_cost 2.0 and accept_rate 0.7
 * nordpool average: just a template sensor extracting the nordpool attribute average to an entity for easier tracking and comparisons "{{ state_attr('sensor.nordpool_kwh_se3_sek_3_10_025', 'average') | float }}"
 * nordpool
-* nordpool_diff: 
+* nordpool_diff:
