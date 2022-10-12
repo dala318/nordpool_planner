@@ -58,7 +58,7 @@ Apart from potentially saving some money, this kind of temporal shifting of cons
 
 There are some optional parameters to provide to the sensor, they car be grouped in some categories.
 
-Generic optional: `duration` (2), `var_duration_entity` (<empty>), `accept_cost` (0.0) and `accept_rate` (0.0). Default values in parenthesis.
+Generic optional: `duration` (2), `var_duration_entity` (""), `accept_cost` (0.0) and `accept_rate` (0.0). Default values in parenthesis.
 
 `duration` can be i nthe range of 1 to 5 and specifies how large window of censecutive hours to slide forward in search for a minimum average price.
 
@@ -74,7 +74,7 @@ The planner types has some additional confuration variables
 
 ### Moving
 
-Optional parameter `var_search_length_entity` (<empty>). Default value in parenthesis.
+Optional parameter `var_search_length_entity` (""). Default value in parenthesis.
 
  ```yaml
  binary_sensor:
@@ -101,7 +101,7 @@ The integration will use minimum of `var_search_length_entity` (if supplied and 
 > **WORK IN PROGRESS**: This version of entity is still not completed, has limitation is that it does not account for hours already used.
 
 
-Optional parameters `var_end_hour_entity` (<empty>) and `split_hours` (false). Default values in parenthesis.
+Optional parameters `var_end_hour_entity` ("") and `split_hours` (false). Default values in parenthesis.
 
  ```yaml
  binary_sensor:

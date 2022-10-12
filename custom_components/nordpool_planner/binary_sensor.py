@@ -69,11 +69,11 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
             vol.Optional(VAR_END_HOUR_ENTITY, default=""): optional_entity_id,
             vol.Optional(SPLIT_HOURS, default=False): vol.Coerce(bool),
         },
-        # Check not both variants in same
-        vol.Required(
-            vol.Any(MOVING, STATIC),
-            msg=TYPE_MISSING_MSG,
-        ): object,
+        # Check either is configured
+        # vol.Required(
+        #     vol.Any(MOVING, STATIC),
+        #     msg=TYPE_MISSING_MSG,
+        # ): object,
     },
 )
 
