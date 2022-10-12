@@ -66,6 +66,18 @@ Generic optional: `duration` (2), `var_duration_entity` (""), `accept_cost` (0.0
 
 The integration will use `var_duration_entity` if supplied and can be interpreted as int, otherwise `duration` or the default value.
 
+A simple way to get you a slider to manually select an input entity value is by an `input_number` as below
+
+```yaml
+input_number:
+  np_time:
+    name: Time to Nordpool Planner
+    initial: 2
+    min: 0
+    max: 24
+    step: 1
+ ```
+
 `accept_cost` specifies a price level in the currency of your `nordpool_entity`, that if an average over a duration is below this value, is accepted and used. Even if not the lowest in the range specified.
 
 `accept_rate` specifies a price rate, that if an average over a `duration` nordpool_average (`nordpool_entity.attributes.average`) is below this rate, is accepted and used. Even if not the lowest in the range specified. E.g. if set to 1 an 'average over duration' <= 'nordpool average' is accepted. If 0.5 it has to be half the price of nordpool average. The idea is to not be as sensitive to offsets I price levels but just a generic rule to accept low section, not just the lowest.
@@ -98,7 +110,7 @@ The integration will use minimum of `var_search_length_entity` (if supplied and 
 
 ### Static
 
-> **WORK IN PROGRESS**: This version of entity is still not completed, has limitation is that it does not account for hours already used.
+> **WORK IN PROGRESS**: This version of entity is still not fully tested, may need some more work to work properly.
 
 
 Optional parameters `var_end_hour_entity` ("") and `split_hours` (false). Default values in parenthesis.
