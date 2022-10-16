@@ -43,24 +43,24 @@ Apart from potentially saving some money, this kind of temporal shifting of cons
           end_hour: 7
     ```
 
-   Exclusively either of `moving` or `static` shall be specified, determines the behavior of hte sensor. See further down about usage.
+   Exclusively either of `moving` or `static` shall be specified, determines the behavior of the sensor. See further down about usage.
 
    Modify the `nordpool_entity` value according to your exact nordpool entity ID, give the entity a describing name and select one of two planner types `moving` or `static`.
 
    `moving` planner searches in a constant window in the future
 
-   `static` planner searches for an ammount of cheap hours until a set time
+   `static` planner searches for an ammount of cheap hours until a set time (work in progress!)
 
 2. Restart HA again to load the configuration. Now you should see `nordpool_planner_2_10_0_0_0_0` binary_sensor, where
    the `2_10_0_0_0_0` part corresponds to default values of optional parameters, explained below.
 
 ## Optional parameters
 
-There are some optional parameters to provide to the sensor, they car be grouped in some categories.
+There are some optional parameters that could be provided to the sensor, they can be grouped in some categories.
 
 Generic optional: `duration` (2), `var_duration_entity` (""), `accept_cost` (0.0) and `accept_rate` (0.0). Default values in parenthesis.
 
-`duration` can be i nthe range of 1 to 5 and specifies how large window of censecutive hours to slide forward in search for a minimum average price.
+`duration` can be in the range of 1 to 5 and specifies how large window of censecutive hours to slide forward in search for a minimum average price.
 
 `var_duration_entity` an entity that provides a numerical value in hours.
 
@@ -78,11 +78,11 @@ input_number:
     step: 1
  ```
 
-`accept_cost` specifies a price level in the currency of your `nordpool_entity`, that if an average over a duration is below this value, is accepted and used. Even if not the lowest in the range specified.
+`accept_cost` specifies a price level in the currency of your `nordpool_entity`, that if an "average over a duration" is below this value, it is accepted and used. Even if not the lowest in the range specified.
 
-`accept_rate` specifies a price rate, that if an average over a `duration` nordpool_average (`nordpool_entity.attributes.average`) is below this rate, is accepted and used. Even if not the lowest in the range specified. E.g. if set to 1 an 'average over duration' <= 'nordpool average' is accepted. If 0.5 it has to be half the price of nordpool average. The idea is to not be as sensitive to offsets I price levels but just a generic rule to accept low section, not just the lowest.
+`accept_rate` specifies a price rate, that if an "average over a duration" divided by nordpool average (`nordpool_entity.attributes.average`) is below this rate, it is accepted and used. Even if not the lowest in the range specified. E.g. if set to 1 an "average over a duration" <= "nordpool average" is accepted. If 0.5 it has to be half the price of "nordpool average". The idea is to not be as sensitive to offsets I price levels but just a generic rule to accept low section, not just the lowest.
 
-The planner types has some additional confuration variables
+The planner types has some additional configuration variables
 
 ### Moving
 
@@ -92,7 +92,7 @@ Optional parameter `var_search_length_entity` (""). Default value in parenthesis
  binary_sensor:
    - platform: nordpool_planner
      nordpool_entity: sensor.nordpool_kwh_fi_eur_3_095_024
-     entity_id: "heat house when cheap"
+     entity_id: "heat_house_when_cheap"
      duration: 2
      var_duration_entity_id: sensor.needed_ammount_of_hors
      accept_cost: 0.0
@@ -160,7 +160,7 @@ If to explain by an image, first orange is now, second orange is `search_length`
 
 ![image](planning_example.png)
 
-Try it and feedback how it works of if there are any improvment to be done!
+Try it and feedback how it works or if there are any improvment to be done!
 
 ### Tuning your settings
 
