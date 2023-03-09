@@ -239,7 +239,7 @@ class NordpoolPlannerSensor(BinarySensorEntity):
                 prince_range = self._np_prices[i : i + duration]
                 # Nordpool sometimes returns null prices, https://github.com/custom-components/nordpool/issues/125
                 # If 50% or more non-Null in range accept and use
-                if len([x for x in prince_range if x is not None]) * 2 > len(
+                if len([x for x in prince_range if x is not None]) * 2 <= len(
                     prince_range
                 ):
                     _LOGGER.debug("Skipping range at %s as to many empty", i)
