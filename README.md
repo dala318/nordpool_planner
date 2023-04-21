@@ -94,7 +94,7 @@ Optional parameter `var_search_length_entity` (""). Default value in parenthesis
      nordpool_entity: sensor.nordpool_kwh_fi_eur_3_095_024
      entity_id: "heat_house_when_cheap"
      duration: 2
-     var_duration_entity_id: sensor.needed_ammount_of_hors
+     var_duration_entity: input_number.needed_ammount_of_hours
      accept_cost: 0.0
      accept_rate: 0.0
      moving:
@@ -121,7 +121,7 @@ Optional parameters `var_end_hour_entity` ("") and `split_hours` (false). Defaul
      nordpool_entity: sensor.nordpool_kwh_fi_eur_3_095_024
      entity_id: "heat house when cheap"
      duration: 2
-     var_duration_entity_id: sensor.estimated_charging_time
+     var_duration_entity: input_number.needed_ammount_of_hours
      accept_cost: 0.0
      accept_rate: 0.0
      static:
