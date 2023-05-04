@@ -15,7 +15,7 @@ async def async_setup(hass: HomeAssistant, config: Config) -> bool:
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry_data = dict(entry.data)
     hass.data[DOMAIN][entry.entry_id] = entry_data
-    hass.config_entries.async_setup_platforms(entry, PLATFORMS)
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
