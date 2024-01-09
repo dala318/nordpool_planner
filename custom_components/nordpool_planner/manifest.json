@@ -7,5 +7,6 @@
   "dependencies": ["nordpool"],
   "codeowners": ["@dala318", "@jpulakka"],
   "iot_class": "calculated",
+  "config_flow": true,
   "version": "0.1.4"
 }
