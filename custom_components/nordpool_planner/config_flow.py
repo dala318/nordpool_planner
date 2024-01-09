@@ -40,7 +40,7 @@ class NordpoolPlannerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         # }
 
         if user_input is not None:
-            pass
+            return self.async_create_entry(title="Nordpool Planner", data=user_input)
             # await self.async_set_unique_id(user_input[CONF_API_KEY])
 
         #     if not self._reauth_entry:
