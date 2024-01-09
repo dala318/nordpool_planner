@@ -9,11 +9,12 @@ from homeassistant.helpers.event import (
     async_track_time_interval,
 )
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.util import dt
 
 _LOGGER = logging.getLogger(__name__)
 
 DOMAIN = "nordpool_planner"
-PLATFORMS = [Platform.BINARY_SENSOR]
+PLATFORMS = [Platform.BINARY_SENSOR, Platform.NUMBER]
 
 CONF_TYPE = "type"
 CONF_TYPE_LIST = ["moving", "static"]
@@ -32,25 +33,22 @@ class NordpoolPlanner:
         # )
         self._hass = hass
         self._config = config_entry
+
         type = config_entry.data[CONF_TYPE]
-        np_entity_id = config_entry.data[CONF_ENTITY]
-        if np_entity_id is not None:
+
+        if self._nordpool_entity is not None:
             # self.async_on_remove(
             #     async_track_state_change_event(
             #         self._hass,
-            #         [np_entity_id],
+            #         [self._nordpool_entity],
             #         self._async_input_changed,
             #     )
             # )
             async_track_state_change_event(
                 self._hass,
-                [np_entity_id],
+                [self._nordpool_entity],
                 self._async_input_changed,
             )
-
-        # @property
-        # def _nordpool_entity(self):
-        #     return config_entry
 
         # # Input configs
         # self._nordpool_entity = nordpool_entity
@@ -100,6 +98,118 @@ class NordpoolPlanner:
     #         raise ConfigEntryAuthFailed from err
     #     except Exception as err:
     #         raise UpdateFailed(f"Unknown error communicating with API: {err}") from err
+
+    @property
+    def _nordpool_entity(self) -> str:
+        return self._config.data[CONF_ENTITY]
+
+    def _update_np_prices(self):
+        np = self._hass.states.get(self._nordpool_entity)
+        if np is None:
+            _LOGGER.warning(
+                "Got empty data from Norpool entity %s ", self._nordpool_entity
+            )
+            return
+        if "today" not in np.attributes.keys():
+            _LOGGER.warning(
+                "No values for today in Norpool entity %s ", self._nordpool_entity
+            )
+            return
+        self._np = np
+
+    @property
+    def _np_prices(self):
+        np_prices = self._np.attributes["today"]
+        if self._np.attributes["tomorrow_valid"]:
+            np_prices += self._np.attributes["tomorrow"]
+        return np_prices
+
+    @property
+    def _np_average(self):
+        return self._np.attributes["average"]
+
+    @property
+    def _np_current(self):
+        return self._np.attributes["current_price"]
+
+    def _get_input_entity_or_default(self, entity_id, default):
+        if entity_id:
+            input_value = self._hass.states.get(entity_id)
+            if not input_value or not input_value.state[0].isdigit():
+                return default
+            try:
+                input_value = int(input_value.state.split(".")[0])
+                if input_value is not None:
+                    return input_value
+            except TypeError:
+                _LOGGER.debug(
+                    'Could not convert value "%s" of entity %s to int',
+                    input_value.state,
+                    entity_id,
+                )
+        return default
+
+    def _update(self, start_hour, search_length: int):
+        # Evaluate data
+        now = dt.now()
+        min_average = self._np_current
+        min_start_hour = now.hour
+        # Only search if current is above acceptable rates and in range
+        if (
+            now.hour >= start_hour
+            and min_average > self._accept_cost
+            and (min_average / self._np_average) > self._accept_rate
+        ):
+            duration = self._get_input_entity_or_default(
+                self._var_duration_entity, self._duration
+            )
+            for i in range(
+                start_hour,
+                min(now.hour + search_length, len(self._np_prices) - duration),
+            ):
+                prince_range = self._np_prices[i : i + duration]
+                # Nordpool sometimes returns null prices, https://github.com/custom-components/nordpool/issues/125
+                # If more than 50% is Null in selected range skip.
+                if len([x for x in prince_range if x is None]) * 2 > len(prince_range):
+                    _LOGGER.debug("Skipping range at %s as to many empty", i)
+                    continue
+                prince_range = [x for x in prince_range if x is not None]
+                average = sum(prince_range) / duration
+                if average < min_average:
+                    min_average = average
+                    min_start_hour = i
+                    _LOGGER.debug("New min value at %s", i)
+                if (
+                    average < self._accept_cost
+                    or (average / self._np_average) < self._accept_rate
+                ):
+                    min_average = average
+                    min_start_hour = i
+                    _LOGGER.debug("Found range under accept level at %s", i)
+                    break
+
+        # Write result to entity
+        if now.hour >= min_start_hour:
+            self._attr_is_on = True
+        else:
+            self._attr_is_on = False
+
+        start = dt.parse_datetime(
+            "%s-%s-%s %s:%s" % (now.year, now.month, now.day, 0, 0)
+        )
+        # Check if next day
+        if min_start_hour >= 24:
+            start += dt.parse_duration("1 day")
+            min_start_hour -= 24
+        self._starts_at = "%04d-%02d-%02d %02d:%02d" % (
+            start.year,
+            start.month,
+            start.day,
+            min_start_hour,
+            0,
+        )
+        self._cost_at = min_average
+        self._now_cost_rate = self._np_current / min_average
 
 
 async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
