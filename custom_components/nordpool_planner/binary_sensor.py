@@ -11,6 +11,8 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 from homeassistant.util import dt
 
+from . import DOMAIN
+
 _LOGGER = logging.getLogger(__name__)
 
 NORDPOOL_ENTITY = "nordpool_entity"
@@ -126,6 +128,78 @@ def setup_platform(
                 )
             ]
         )
+
+
+# def _dry_setup(hass, config, add_devices, discovery_info=None):
+#     """Setup the damn platform using yaml."""
+#     _LOGGER.debug("Dumping config %r", config)
+#     _LOGGER.debug("timezone set in ha %r", hass.config.time_zone)
+#     # region = config.get(CONF_REGION)
+#     # friendly_name = config.get("friendly_name", "")
+#     # price_type = config.get("price_type")
+#     # precision = config.get("precision")
+#     # low_price_cutoff = config.get("low_price_cutoff")
+#     # currency = config.get("currency")
+#     # vat = config.get("VAT")
+#     # use_cents = config.get("price_in_cents")
+#     # ad_template = config.get("additional_costs")
+#     # api = hass.data[DOMAIN]
+#     # sensor = NordpoolPlannerSensor(
+#     #     friendly_name,
+#     #     region,
+#     #     price_type,
+#     #     precision,
+#     #     low_price_cutoff,
+#     #     currency,
+#     #     vat,
+#     #     use_cents,
+#     #     api,
+#     #     ad_template,
+#     #     hass,
+#     # )
+
+#     # add_devices([sensor])
+
+
+# async def async_setup_platform(hass, config, add_devices, discovery_info=None) -> None:
+#     _dry_setup(hass, config, add_devices)
+#     return True
+
+
+async def async_setup_entry(hass, config_entry, async_add_devices):
+    """Setup sensor platform for the ui"""
+    # config = config_entry.data
+    planner = hass.data[DOMAIN][config_entry.entry_id]
+    async_add_devices([NordpoolPlannerBinarySensor(planner)])
+
+    # _dry_setup(hass, config, async_add_devices)
+    return True
+
+
+class NordpoolPlannerBinarySensor(BinarySensorEntity):
+    _attr_icon = "mdi:flash"
+
+    def __init__(
+        self,
+        planner,
+    ) -> None:
+        # Input configs
+        self._planner = planner
+
+        # Output states
+        self._attr_is_on = STATE_UNKNOWN
+        self._starts_at = STATE_UNKNOWN
+        self._cost_at = STATE_UNKNOWN
+        self._now_cost_rate = STATE_UNKNOWN
+
+    @property
+    def extra_state_attributes(self):
+        """Provide attributes for the entity"""
+        return {
+            "starts_at": self._starts_at,
+            "cost_at": self._cost_at,
+            "now_cost_rate": self._now_cost_rate,
+        }
 
 
 class NordpoolPlannerSensor(BinarySensorEntity):

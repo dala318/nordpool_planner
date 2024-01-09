@@ -13,15 +13,11 @@ from homeassistant import config_entries
 # from homeassistant.const import CONF_API_KEY
 from homeassistant.data_entry_flow import FlowResult
 
-from . import DOMAIN
+from . import DOMAIN, CONF_ENTITY, CONF_TYPE, CONF_TYPE_LIST
 
 # from .lib import poollab
 
 _LOGGER = logging.getLogger(__name__)
-
-CONF_TYPE = "type"
-CONF_TYPE_LIST = ["moving", "static"]
-CONF_ENTITY = "entity"
 
 
 class NordpoolPlannerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
