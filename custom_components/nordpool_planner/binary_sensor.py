@@ -11,7 +11,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 from homeassistant.util import dt
 
-from . import DOMAIN
+from . import DOMAIN, NordpoolPlannerBinarySensor
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -174,32 +174,6 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
 
     # _dry_setup(hass, config, async_add_devices)
     return True
-
-
-class NordpoolPlannerBinarySensor(BinarySensorEntity):
-    _attr_icon = "mdi:flash"
-
-    def __init__(
-        self,
-        planner,
-    ) -> None:
-        # Input configs
-        self._planner = planner
-
-        # Output states
-        self._attr_is_on = STATE_UNKNOWN
-        self._starts_at = STATE_UNKNOWN
-        self._cost_at = STATE_UNKNOWN
-        self._now_cost_rate = STATE_UNKNOWN
-
-    @property
-    def extra_state_attributes(self):
-        """Provide attributes for the entity"""
-        return {
-            "starts_at": self._starts_at,
-            "cost_at": self._cost_at,
-            "now_cost_rate": self._now_cost_rate,
-        }
 
 
 class NordpoolPlannerSensor(BinarySensorEntity):

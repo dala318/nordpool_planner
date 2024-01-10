@@ -1,5 +1,7 @@
 from __future__ import annotations
 import logging
+from homeassistant.components.binary_sensor import BinarySensorEntity
+from homeassistant.components.number import NumberEntity
 
 from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
 from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN, Platform
@@ -71,6 +73,13 @@ class NordpoolPlanner:
         # self._cost_at = STATE_UNKNOWN
         # self._now_cost_rate = STATE_UNKNOWN
 
+    def get_binary_sensor_entities(self):
+        # return [NordpoolPlannerBinaeySensor(self)]
+        pass
+
+    def get_number_entities(self) -> list[NordpoolPlannerNumber]:
+        return [NordpoolPlannerNumber(self)]
+
     async def _async_input_changed(self, event):
         new_state = event.data.get("new_state")
         _LOGGER.info("Sensor change: %s", new_state)
@@ -103,6 +112,21 @@ class NordpoolPlanner:
     def _nordpool_entity(self) -> str:
         return self._config.data[CONF_ENTITY]
 
+    @property
+    def _accept_cost(self) -> float:
+        # return self._config.data[CONF_ENTITY]
+        return 1.0
+
+    @property
+    def _accept_rate(self) -> float:
+        # return self._config.data[CONF_ENTITY]
+        return 1.0
+
+    @property
+    def _duration(self) -> int:
+        # return self._config.data[CONF_ENTITY]
+        return 3
+
     def _update_np_prices(self):
         np = self._hass.states.get(self._nordpool_entity)
         if np is None:
@@ -132,22 +156,22 @@ class NordpoolPlanner:
     def _np_current(self):
         return self._np.attributes["current_price"]
 
-    def _get_input_entity_or_default(self, entity_id, default):
-        if entity_id:
-            input_value = self._hass.states.get(entity_id)
-            if not input_value or not input_value.state[0].isdigit():
-                return default
-            try:
-                input_value = int(input_value.state.split(".")[0])
-                if input_value is not None:
-                    return input_value
-            except TypeError:
-                _LOGGER.debug(
-                    'Could not convert value "%s" of entity %s to int',
-                    input_value.state,
-                    entity_id,
-                )
-        return default
+    # def _get_input_entity_or_default(self, entity_id, default):
+    #     if entity_id:
+    #         input_value = self._hass.states.get(entity_id)
+    #         if not input_value or not input_value.state[0].isdigit():
+    #             return default
+    #         try:
+    #             input_value = int(input_value.state.split(".")[0])
+    #             if input_value is not None:
+    #                 return input_value
+    #         except TypeError:
+    #             _LOGGER.debug(
+    #                 'Could not convert value "%s" of entity %s to int',
+    #                 input_value.state,
+    #                 entity_id,
+    #             )
+    #     return default
 
     def _update(self, start_hour, search_length: int):
         # Evaluate data
@@ -160,9 +184,11 @@ class NordpoolPlanner:
             and min_average > self._accept_cost
             and (min_average / self._np_average) > self._accept_rate
         ):
-            duration = self._get_input_entity_or_default(
-                self._var_duration_entity, self._duration
-            )
+            # duration = self._get_input_entity_or_default(
+            #     self._var_duration_entity, self._duration
+            # )
+            duration = self._duration
+
             for i in range(
                 start_hour,
                 min(now.hour + search_length, len(self._np_prices) - duration),
@@ -269,3 +295,122 @@ async def async_reload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> 
 #     if unload_ok:
 #         hass.data[DOMAIN].pop(entry.entry_id)
 #     return unload_ok
+
+
+class NordpoolPlannerBinarySensor(BinarySensorEntity):
+    _attr_icon = "mdi:flash"
+
+    def __init__(
+        self,
+        planner,
+    ) -> None:
+        # Input configs
+        self._planner = planner
+
+        # Output states
+        self._attr_is_on = STATE_UNKNOWN
+        self._starts_at = STATE_UNKNOWN
+        self._cost_at = STATE_UNKNOWN
+        self._now_cost_rate = STATE_UNKNOWN
+
+    @property
+    def name(self) -> str:
+        return "Planner BinarySensor"
+
+    @property
+    def should_poll(self):
+        """No need to poll. Coordinator notifies entity of updates."""
+        return False
+
+    @property
+    def unique_id(self):
+        name = "nordpool_planner_%s" % (self.name,)
+        name = name.lower().replace(".", "")
+        return name
+
+    @property
+    def extra_state_attributes(self):
+        """Provide attributes for the entity"""
+        return {
+            "starts_at": self._starts_at,
+            "cost_at": self._cost_at,
+            "now_cost_rate": self._now_cost_rate,
+        }
+
+
+class NordpoolPlannerNumber(NumberEntity):
+    # _attr_icon = "mdi:flash"
+
+    def __init__(
+        self,
+        planner,
+    ) -> None:
+        # Input configs
+        self._planner = planner
+
+        # # Output states
+        # self._attr_is_on = STATE_UNKNOWN
+        # self._starts_at = STATE_UNKNOWN
+        # self._cost_at = STATE_UNKNOWN
+        # self._now_cost_rate = STATE_UNKNOWN
+
+    # @property
+    # def extra_state_attributes(self):
+    #     """Provide attributes for the entity"""
+    #     return {
+    #         "starts_at": self._starts_at,
+    #         "cost_at": self._cost_at,
+    #         "now_cost_rate": self._now_cost_rate,
+    #     }
+
+    # @callback
+    # def _handle_coordinator_update(self) -> None:
+    #     """Handle updated data from the coordinator."""
+    #     try:
+    #         self._latest_measurement = self.coordinator.data.get_measurement(
+    #             self._account.id, self._latest_measurement.parameter
+    #         )
+    #         self.async_write_ha_state()
+    #     except StopIteration:
+    #         _LOGGER.error(
+    #             "Could not find a measurement matching id:%s and parameter:%s",
+    #             self._account.id,
+    #             self._latest_measurement.parameter,
+    #         )
+
+    @property
+    def name(self) -> str:
+        return "Planner Number"
+
+    @property
+    def should_poll(self):
+        """No need to poll. Coordinator notifies entity of updates."""
+        return False
+
+    # @property
+    # def unit(self) -> str:
+    #     """Unit"""
+    #     return self._price_type
+
+    # @property
+    # def unit_of_measurement(self) -> str:  # FIXME
+    #     """Return the unit of measurement this sensor expresses itself in."""
+    #     _currency = self._currency
+    #     if self._use_cents is True:
+    #         # Convert unit of measurement to cents based on chosen currency
+    #         _currency = _CURRENTY_TO_CENTS[_currency]
+    #     return "%s/%s" % (_currency, self._price_type)
+
+    @property
+    def unique_id(self):
+        name = "nordpool_planner_%s" % (self.name,)
+        name = name.lower().replace(".", "")
+        return name
+
+    def set_native_value(self, value: float) -> None:
+        """Update the current value."""
+        pass
+
+    async def async_set_native_value(self, value: float) -> None:
+        """Update the current value."""
+        pass
