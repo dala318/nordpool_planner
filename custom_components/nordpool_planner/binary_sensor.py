@@ -188,9 +188,9 @@ class NordpoolPlannerSensor(BinarySensorEntity):
 
     @property
     def _np_prices(self):
-        np_prices = self._np.attributes["today"]
+        np_prices = self._np.attributes["today"][:]  # Use copy of list
         if self._np.attributes["tomorrow_valid"]:
-            np_prices += self._np.attributes["tomorrow"]
+            np_prices += self._np.attributes["tomorrow"][:]
         return np_prices
 
     @property
@@ -243,7 +243,7 @@ class NordpoolPlannerSensor(BinarySensorEntity):
                     _LOGGER.debug("Skipping range at %s as to many empty", i)
                     continue
                 prince_range = [x for x in prince_range if x is not None]
-                average = sum(prince_range) / duration
+                average = sum(prince_range) / len(prince_range)
                 if average < min_average:
                     min_average = average
                     min_start_hour = i
