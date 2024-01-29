@@ -13,7 +13,15 @@ from homeassistant import config_entries
 # from homeassistant.const import CONF_API_KEY
 from homeassistant.data_entry_flow import FlowResult
 
-from . import DOMAIN, CONF_ENTITY, CONF_TYPE, CONF_TYPE_LIST
+from . import (
+    DOMAIN,
+    CONF_ACCEPT_COST,
+    CONF_ACCEPT_RATE,
+    CONF_DURATION,
+    CONF_NP_ENTITY,
+    CONF_TYPE,
+    CONF_TYPE_LIST,
+)
 
 # from .lib import poollab
 
@@ -37,7 +45,7 @@ class NordpoolPlannerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             await self.async_set_unique_id(
-                user_input[CONF_ENTITY] + user_input[CONF_TYPE]
+                user_input[CONF_NP_ENTITY] + user_input[CONF_TYPE]
             )
             return self.async_create_entry(title="Nordpool Planner", data=user_input)
 
@@ -76,15 +84,33 @@ class NordpoolPlannerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Required(CONF_TYPE): selector.SelectSelector(
                     selector.SelectSelectorConfig(options=CONF_TYPE_LIST),
                 ),
-                vol.Required(CONF_ENTITY): selector.SelectSelector(
+                vol.Required(CONF_NP_ENTITY): selector.SelectSelector(
                     selector.SelectSelectorConfig(options=senssor_entities),
                 ),
+                # vol.Optional(CONF_DURATION, default=None): vol.All(
+                #     vol.Coerce(int), vol.Range(min=2, max=8)
+                # ),
+                # vol.Optional(CONF_DURATION, default=0): vol.All(
+                #     vol.Coerce(int), vol.Range(min=0, max=8)
+                # ),
+                # vol.Optional(CONF_ACCEPT_RATE, default=None): vol.Range(
+                #     min=0.0, max=10.0
+                # ),
+                # vol.Optional(CONF_ACCEPT_RATE, default=0.0): vol.All(
+                #     vol.Coerce(float), vol.Range(min=0.0, max=10.0)
+                # ),
+                # vol.Optional(CONF_ACCEPT_COST, default=None): vol.Range(
+                #     min=0.0, max=100.0
+                # ),
+                # vol.Optional(CONF_ACCEPT_COST, default=None): vol.All(
+                #     vol.Coerce(float), vol.Range(min=0.0, max=100.0)
+                # ),
             }
         )
 
         placeholders = {
             CONF_TYPE: CONF_TYPE_LIST,
-            CONF_ENTITY: senssor_entities,
+            CONF_NP_ENTITY: senssor_entities,
         }
 
         return self.async_show_form(

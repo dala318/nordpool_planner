@@ -1,0 +1,22 @@
+{
+    "config": {
+        "title": "Nordpool Planner",
+        "step": {
+            "user": {
+                "title": "Nordpool Planner",
+                "description": "Setup a Nordpool Planner",
+                "data": {
+                    "type": "Planner type",
+                    "entity": "Nordpool entity",
+                    "duration": "Duration: Set to a fixed value or leave unchanges to create an input config entity that can be modified",
+                    "accept_cost": "Accept cost: Set to a fixed value or leave unchanges to create an input config entity that can be modified",
+                    "accept_rate": "Accept rate: Set to a fixed value or leave unchanges to create an input config entity that can be modified"
+                }
+            }
+        },
+        "error": {
+            "name_exists": "Name already exists",
+            "invalid_template": "The template is invalid"
+        }
+    }
+}
