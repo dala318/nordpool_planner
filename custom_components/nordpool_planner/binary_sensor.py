@@ -51,10 +51,10 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
         ),
         vol.Optional(VAR_DURATION_ENTITY, default=""): optional_entity_id,
         vol.Optional(ACCEPT_COST, default=0.0): vol.All(
-            vol.Coerce(float), vol.Range(min=0.0, max=10000.0)
+            vol.Coerce(float), vol.Range(min=-10000.0, max=10000.0)
         ),
         vol.Optional(ACCEPT_RATE, default=0.0): vol.All(
-            vol.Coerce(float), vol.Range(min=0.0, max=10000.0)
+            vol.Coerce(float), vol.Range(min=-10000.0, max=10000.0)
         ),
         # Moving planner exclusives
         vol.Exclusive(MOVING, TYPE_GROUP, msg=TYPE_DUPLICATE_MSG): {
