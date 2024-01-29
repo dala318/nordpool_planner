@@ -53,10 +53,10 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
         ),
         vol.Optional(VAR_DURATION_ENTITY, default=""): optional_entity_id,
         vol.Optional(ACCEPT_COST, default=0.0): vol.All(
-            vol.Coerce(float), vol.Range(min=0.0, max=10000.0)
+            vol.Coerce(float), vol.Range(min=-10000.0, max=10000.0)
         ),
         vol.Optional(ACCEPT_RATE, default=0.0): vol.All(
-            vol.Coerce(float), vol.Range(min=0.0, max=10000.0)
+            vol.Coerce(float), vol.Range(min=-10000.0, max=10000.0)
         ),
         # Moving planner exclusives
         vol.Exclusive(MOVING, TYPE_GROUP, msg=TYPE_DUPLICATE_MSG): {
@@ -236,9 +236,9 @@ class NordpoolPlannerSensor(BinarySensorEntity):
 
     @property
     def _np_prices(self):
-        np_prices = self._np.attributes["today"]
+        np_prices = self._np.attributes["today"][:]  # Use copy of list
         if self._np.attributes["tomorrow_valid"]:
-            np_prices += self._np.attributes["tomorrow"]
+            np_prices += self._np.attributes["tomorrow"][:]
         return np_prices
 
     @property
@@ -291,7 +291,7 @@ class NordpoolPlannerSensor(BinarySensorEntity):
                     _LOGGER.debug("Skipping range at %s as to many empty", i)
                     continue
                 prince_range = [x for x in prince_range if x is not None]
-                average = sum(prince_range) / duration
+                average = sum(prince_range) / len(prince_range)
                 if average < min_average:
                     min_average = average
                     min_start_hour = i
