@@ -94,13 +94,13 @@ class NordpoolPlannerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 #     vol.Coerce(int), vol.Range(min=0, max=8)
                 # ),
                 # vol.Optional(CONF_ACCEPT_RATE, default=None): vol.Range(
-                #     min=0.0, max=10.0
+                #     min=-10.0, max=10.0
                 # ),
                 # vol.Optional(CONF_ACCEPT_RATE, default=0.0): vol.All(
                 #     vol.Coerce(float), vol.Range(min=0.0, max=10.0)
                 # ),
                 # vol.Optional(CONF_ACCEPT_COST, default=None): vol.Range(
-                #     min=0.0, max=100.0
+                #     min=-100.0, max=100.0
                 # ),
                 # vol.Optional(CONF_ACCEPT_COST, default=None): vol.All(
                 #     vol.Coerce(float), vol.Range(min=0.0, max=100.0)

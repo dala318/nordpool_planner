@@ -166,7 +166,7 @@ def setup_platform(
 #     return True
 
 
-async def async_setup_entry(hass, config_entry, async_add_devices):
+async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_devices):
     """Setup sensor platform for the ui"""
     # config = config_entry.data
     planner = hass.data[DOMAIN][config_entry.entry_id]
@@ -189,7 +189,7 @@ class NordpoolPlannerSensor(BinarySensorEntity):
         var_duration_entity,
         accept_cost,
         accept_rate,
-    ):
+    ) -> None:
         # Input configs
         self._nordpool_entity = nordpool_entity
         self._duration = duration
@@ -332,7 +332,7 @@ class NordpoolPlannerSensor(BinarySensorEntity):
 class NordpoolMovingPlannerSensor(NordpoolPlannerSensor):
     """Nordpool planner with moving search length"""
 
-    def __init__(self, search_length, var_search_length_entity, **kwds):
+    def __init__(self, search_length, var_search_length_entity, **kwds) -> None:
         super().__init__(**kwds)
         self._search_length = search_length
         self._var_search_length_entity = var_search_length_entity
@@ -353,7 +353,7 @@ class NordpoolMovingPlannerSensor(NordpoolPlannerSensor):
 class NordpoolStaticPlannerSensor(NordpoolPlannerSensor):
     """Nordpool planner with fixed search length end time"""
 
-    def __init__(self, end_hour, var_end_hour_entity, split_hours, **kwds):
+    def __init__(self, end_hour, var_end_hour_entity, split_hours, **kwds) -> None:
         super().__init__(**kwds)
         self._end_hour = end_hour
         self._var_end_hour_entity = var_end_hour_entity

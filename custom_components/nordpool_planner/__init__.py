@@ -28,7 +28,7 @@ CONF_ACCEPT_RATE = "accept_rate"
 
 
 class NordpoolPlanner:
-    def __init__(self, hass, config_entry: ConfigEntry) -> None:
+    def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry) -> None:
         """Initialize my coordinator."""
         # super().__init__(
         #     hass,
@@ -139,13 +139,20 @@ class NordpoolPlanner:
     def _nordpool_entity(self) -> str:
         return self._config.data[CONF_NP_ENTITY]
 
-    @property
-    def _duration(self) -> int:
-        # if (
-        #     CONF_DURATION in self._config.data.keys()
-        #     and self._config.data[CONF_DURATION]
-        # ):
-        #     return self._config.data[CONF_DURATION]
+    def get_duration(self) -> int:
+        if self._duration_number_entity:
+            input_value = self.hass.states.get(self._duration_number_entity)
+            if input_value and input_value.state[0].isdigit():
+                try:
+                    input_value = int(input_value.state.split(".")[0])
+                    if input_value is not None:
+                        return input_value
+                except TypeError:
+                    _LOGGER.debug(
+                        'Could not convert value "%s" of entity %s to int',
+                        input_value.state,
+                        self._duration_number_entity,
+                    )
         if self._duration_value:
             return self._duration_value
         return 3
@@ -211,7 +218,7 @@ class NordpoolPlanner:
             and min_average > self._accept_cost
             and (min_average / self._np_average) > self._accept_rate
         ):
-            duration = self._duration
+            duration = self.get_duration()
 
             for i in range(
                 start_hour,
