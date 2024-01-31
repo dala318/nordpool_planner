@@ -25,6 +25,7 @@ CONF_NP_ENTITY = "entity"
 CONF_DURATION = "duration"
 CONF_ACCEPT_COST = "accept_cost"
 CONF_ACCEPT_RATE = "accept_rate"
+CONF_SEARCH_LENGTH = "search_length"
 
 
 class NordpoolPlanner:
@@ -40,7 +41,7 @@ class NordpoolPlanner:
         self._hass = hass
         self._config = config_entry
 
-        type = config_entry.data[CONF_TYPE]
+        self._type = config_entry.data[CONF_TYPE]
 
         if self._nordpool_entity is not None:
             # self.async_on_remove(
@@ -77,7 +78,8 @@ class NordpoolPlanner:
         self._accept_rate_number_entity = None
 
         # Output states
-        self._attr_is_on = STATE_UNKNOWN
+        self.state = NordpoolPlannerState()
+        # self._attr_is_on = STATE_UNKNOWN
         # self._starts_at = STATE_UNKNOWN
         # self._cost_at = STATE_UNKNOWN
         # self._now_cost_rate = STATE_UNKNOWN
@@ -95,21 +97,22 @@ class NordpoolPlanner:
     async def _async_input_changed(self, event):
         new_state = event.data.get("new_state")
         _LOGGER.info("Sensor change: %s", new_state)
+        self.update()
 
-        # Update nordpool prices
-        np = self._hass.states.get(self._nordpool_entity)
-        if np is None:
-            _LOGGER.warning(
-                "Got empty data from Norpool entity %s ", self._nordpool_entity
-            )
-            # return
-        elif "today" not in np.attributes.keys():
-            _LOGGER.warning(
-                "No values for today in Norpool entity %s ", self._nordpool_entity
-            )
-            # return
-        else:
-            self._np = np
+        # # Update nordpool prices
+        # np = self._hass.states.get(self._nordpool_entity)
+        # if np is None:
+        #     _LOGGER.warning(
+        #         "Got empty data from Norpool entity %s ", self._nordpool_entity
+        #     )
+        #     # return
+        # elif "today" not in np.attributes.keys():
+        #     _LOGGER.warning(
+        #         "No values for today in Norpool entity %s ", self._nordpool_entity
+        #     )
+        #     # return
+        # else:
+        #     self._np = np
 
     # async def _async_sensor_changed(self, event):
     #     """Handle temperature changes."""
@@ -141,7 +144,7 @@ class NordpoolPlanner:
 
     def get_duration(self) -> int:
         if self._duration_number_entity:
-            input_value = self.hass.states.get(self._duration_number_entity)
+            input_value = self._hass.states.get(self._duration_number_entity)
             if input_value and input_value.state[0].isdigit():
                 try:
                     input_value = int(input_value.state.split(".")[0])
@@ -176,6 +179,15 @@ class NordpoolPlanner:
         return 1.5
 
     @property
+    def _search_length(self) -> int:
+        if (
+            CONF_SEARCH_LENGTH in self._config.data.keys()
+            and self._config.data[CONF_SEARCH_LENGTH]
+        ):
+            return self._config.data[CONF_SEARCH_LENGTH]
+        return 12
+
+    @property
     def _np_prices(self):
         np_prices = self._np.attributes["today"]
         if self._np.attributes["tomorrow_valid"]:
@@ -190,20 +202,26 @@ class NordpoolPlanner:
     def _np_current(self):
         return self._np.attributes["current_price"]
 
+    def update(self):
+        if self._type == "moving":
+            self._update(dt.now().hour, self._search_length)
+
     def _update(self, start_hour, search_length: int):
-        # # Update nordpool prices
-        # np = self._hass.states.get(self._nordpool_entity)
-        # if np is None:
-        #     _LOGGER.warning(
-        #         "Got empty data from Norpool entity %s ", self._nordpool_entity
-        #     )
-        #     return
-        # if "today" not in np.attributes.keys():
-        #     _LOGGER.warning(
-        #         "No values for today in Norpool entity %s ", self._nordpool_entity
-        #     )
-        #     return
-        # self._np = np
+        # Update nordpool prices
+        np = self._hass.states.get(self._nordpool_entity)
+        if np is None:
+            _LOGGER.warning(
+                "Got empty data from Norpool entity %s ", self._nordpool_entity
+            )
+            # return
+        elif "today" not in np.attributes.keys():
+            _LOGGER.warning(
+                "No values for today in Norpool entity %s ", self._nordpool_entity
+            )
+            # return
+        else:
+            self._np = np
+
         if self._np is None:
             # ToDo: Set UNAVAILABLE?
             return
@@ -247,9 +265,11 @@ class NordpoolPlanner:
 
         # Write result to entity
         if now.hour >= min_start_hour:
-            self._attr_is_on = True
+            # self._attr_is_on = True
+            self.state.is_on = True
         else:
-            self._attr_is_on = False
+            # self._attr_is_on = False
+            self.state.is_on = False
 
         start = dt.parse_datetime(
             "%s-%s-%s %s:%s" % (now.year, now.month, now.day, 0, 0)
@@ -258,15 +278,15 @@ class NordpoolPlanner:
         if min_start_hour >= 24:
             start += dt.parse_duration("1 day")
             min_start_hour -= 24
-        self._starts_at = "%04d-%02d-%02d %02d:%02d" % (
+        self.state.starts_at = "%04d-%02d-%02d %02d:%02d" % (
             start.year,
             start.month,
             start.day,
             min_start_hour,
             0,
         )
-        self._cost_at = min_average
-        self._now_cost_rate = self._np_current / min_average
+        self.state.cost_at = min_average
+        self.state.now_cost_rate = self._np_current / min_average
 
 
 async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
@@ -328,6 +348,14 @@ async def async_reload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> 
 #     return unload_ok
 
 
+class NordpoolPlannerState:
+    def __init__(self) -> None:
+        self.is_on = STATE_UNKNOWN
+        self.starts_at = STATE_UNKNOWN
+        self.cost_at = STATE_UNKNOWN
+        self.now_cost_rate = STATE_UNKNOWN
+
+
 class NordpoolPlannerEntity(Entity):
     def __init__(
         self,
@@ -359,24 +387,41 @@ class NordpoolPlannerBinarySensor(NordpoolPlannerEntity, BinarySensorEntity):
         self,
         planner,
     ) -> None:
-        super().__init__(planner)
+        super().__init__(planner=planner)
         # Input configs
         # self._planner = planner
 
-        # Output states
-        self._attr_is_on = STATE_UNKNOWN
-        self._starts_at = STATE_UNKNOWN
-        self._cost_at = STATE_UNKNOWN
-        self._now_cost_rate = STATE_UNKNOWN
+        # # Output states
+        # self._attr_is_on = STATE_UNKNOWN
+        # self._starts_at = STATE_UNKNOWN
+        # self._cost_at = STATE_UNKNOWN
+        # self._now_cost_rate = STATE_UNKNOWN
+
+    @property
+    def _attr_is_on(self):
+        return self._planner.state.is_on
 
     @property
     def extra_state_attributes(self):
         """Provide attributes for the entity"""
         return {
-            "starts_at": self._starts_at,
-            "cost_at": self._cost_at,
-            "now_cost_rate": self._now_cost_rate,
+            "starts_at": self._planner.state.starts_at,
+            "cost_at": self._planner.state.cost_at,
+            "now_cost_rate": self._planner.state.now_cost_rate,
         }
+
+    def update(self):
+        """Called from Home Assistant to update entity value"""
+        self._planner.update()
+        # self._update_np_prices()
+        # if self._np is not None:
+        #     search_length = min(
+        #         self._get_input_entity_or_default(
+        #             self._var_search_length_entity, self._search_length
+        #         ),
+        #         self._search_length,
+        #     )
+        #     self._update(dt.now().hour, search_length)
 
 
 class NordpoolPlannerNumber(NordpoolPlannerEntity, NumberEntity):
