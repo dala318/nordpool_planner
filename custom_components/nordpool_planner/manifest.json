@@ -1,11 +1,11 @@
 {
   "domain": "nordpool_planner",
-  "name": "nordpool_planner",
+  "name": "Nordpool Planner",
   "documentation": "https://github.com/dala318/nordpool_planner",
   "issue_tracker": "https://github.com/dala318/nordpool_planner/issues",
   "requirements": [],
   "dependencies": ["nordpool"],
-  "codeowners": ["@dala318", "@jpulakka"],
+  "codeowners": ["@dala318"],
   "iot_class": "calculated",
   "version": "0.1.4"
 }
