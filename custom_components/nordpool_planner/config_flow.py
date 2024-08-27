@@ -1,18 +1,12 @@
 """Config flow for PoolLab integration."""
 from __future__ import annotations
 import logging
-import selectors
-from types import NoneType
 import voluptuous as vol
-from collections.abc import Mapping
 from typing import Any, Dict, Optional
 
-import homeassistant.helpers.config_validation as cv
-from homeassistant.helpers import entity_registry as er, selector
 from homeassistant import config_entries
-
-# from homeassistant.const import CONF_API_KEY
 from homeassistant.data_entry_flow import FlowResult
+from homeassistant.helpers import entity_registry as selector
 
 from . import (
     DOMAIN,
@@ -22,12 +16,11 @@ from . import (
     CONF_END_TIME,
     CONF_NAME,
     CONF_NP_ENTITY,
+    CONF_SEARCH_LENGTH,
     CONF_TYPE,
     CONF_TYPE_LIST,
-    CONF_SEARCH_LENGTH,
 )
 
-# from .lib import poollab
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -117,15 +110,8 @@ class NordpoolPlannerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self, user_input: Optional[Dict[str, Any]] | None = None
     ) -> FlowResult:
         """Second step in config flow to set options for moving planner."""
-        # errors = {}
         errors: Dict[str, str] = {}
         if user_input is not None:
-            # Validate the settings.
-            # try:
-            #     pass
-            # except ValueError:
-            #     errors["base"] = "Some error occured"
-
             if not errors:
                 self.data['moving'] = user_input
                 # Set not defined values to none (to create config entity)
@@ -141,15 +127,9 @@ class NordpoolPlannerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             }
         )
 
-        placeholders = {
-            # CONF_SEARCH_LENGTH: CONF_TYPE_LIST,
-            # CONF_NP_ENTITY: sensor_entities,
-        }
-
         return self.async_show_form(
             step_id="user_moving",
             data_schema=schema,
-            # description_placeholders=placeholders,
             errors=errors,
         )
 
@@ -157,15 +137,8 @@ class NordpoolPlannerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self, user_input: Optional[Dict[str, Any]] | None = None
     ) -> FlowResult:
         """Second step in config flow to set options for static planner."""
-        # errors = {}
         errors: Dict[str, str] = {}
         if user_input is not None:
-            # Validate the settings.
-            # try:
-            #     pass
-            # except ValueError:
-            #     errors["base"] = "Some error occured"
-
             if not errors:
                 self.data['static'] = user_input
                 # Set not defined values to none (to create config entity)
@@ -181,15 +154,9 @@ class NordpoolPlannerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             }
         )
 
-        placeholders = {
-            # CONF_SEARCH_LENGTH: CONF_TYPE_LIST,
-            # CONF_NP_ENTITY: sensor_entities,
-        }
-
         return self.async_show_form(
             step_id="user_static",
             data_schema=schema,
-            # description_placeholders=placeholders,
             errors=errors,
         )
 
