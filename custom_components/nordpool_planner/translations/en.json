@@ -6,17 +6,35 @@
                 "title": "Nordpool Planner",
                 "description": "Setup a Nordpool Planner",
                 "data": {
+                    "name": "Name of planner",
                     "type": "Planner type",
-                    "entity": "Nordpool entity",
-                    "duration": "Duration: Set to a fixed value or leave unchanges to create an input config entity that can be modified",
-                    "accept_cost": "Accept cost: Set to a fixed value or leave unchanges to create an input config entity that can be modified",
-                    "accept_rate": "Accept rate: Set to a fixed value or leave unchanges to create an input config entity that can be modified"
+                    "np_entity": "Nordpool entity",
+                    "duration": "Duration: How many hours (empty to create a config entity)",
+                    "accept_cost": "Accept cost: Accept if average below (empty to create a config entity)",
+                    "accept_rate": "Accept rate: Accept if average rate below (empty to create a config entity)"
+                }
+            },
+            "user_moving": {
+                "title": "Moving Specifics",
+                "description": "Type specific settings",
+                "data": {
+                    "search_length": "Search length: How far in the future (empty to create a config entity)"
+                }
+            },
+            "user_static": {
+                "title": "Static Specifics",
+                "description": "Type specific settings",
+                "data": {
+                    "end_time": "End time: At what latest hour to complete (empty to create a config entity)"
                 }
             }
         },
         "error": {
             "name_exists": "Name already exists",
             "invalid_template": "The template is invalid"
-        }
+        },
+        "abort": {
+            "already_configured": "Already configured with the same settings or name"
+          }
     }
 }

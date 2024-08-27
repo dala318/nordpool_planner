@@ -19,14 +19,15 @@ _LOGGER = logging.getLogger(__name__)
 DOMAIN = "nordpool_planner"
 PLATFORMS = [Platform.BINARY_SENSOR, Platform.NUMBER]
 
+CONF_NAME = "name"
 CONF_TYPE = "type"
 CONF_TYPE_LIST = ["moving", "static"]
-CONF_NP_ENTITY = "entity"
+CONF_NP_ENTITY = "np_entity"
 CONF_DURATION = "duration"
 CONF_ACCEPT_COST = "accept_cost"
 CONF_ACCEPT_RATE = "accept_rate"
 CONF_SEARCH_LENGTH = "search_length"
-
+CONF_END_TIME = "end_time"
 
 class NordpoolPlanner:
     def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry) -> None:
@@ -203,8 +204,8 @@ class NordpoolPlanner:
         return self._np.attributes["current_price"]
 
     def update(self):
-        if self._type == "moving":
-            self._update(dt.now().hour, self._search_length)
+        # if self._type == "moving":
+        self._update(dt.now().hour, self._search_length)
 
     def _update(self, start_hour, search_length: int):
         # Update nordpool prices
@@ -397,9 +398,9 @@ class NordpoolPlannerBinarySensor(NordpoolPlannerEntity, BinarySensorEntity):
         # self._cost_at = STATE_UNKNOWN
         # self._now_cost_rate = STATE_UNKNOWN
 
-    @property
-    def _attr_is_on(self):
-        return self._planner.state.is_on
+    # @property
+    # def _attr_is_on(self):
+    #     return self._planner.state.is_on
 
     @property
     def extra_state_attributes(self):
