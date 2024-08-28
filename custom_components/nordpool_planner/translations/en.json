@@ -8,24 +8,35 @@
                 "data": {
                     "name": "Name of planner",
                     "type": "Planner type",
-                    "np_entity": "Nordpool entity",
-                    "duration": "Duration: How many hours (empty to create a config entity)",
-                    "accept_cost": "Accept cost: Accept if average below (empty to create a config entity)",
-                    "accept_rate": "Accept rate: Accept if average rate below (empty to create a config entity)"
+                    "np_entity": "Nordpool entity"
                 }
             },
             "user_moving": {
                 "title": "Moving Specifics",
                 "description": "Type specific settings",
                 "data": {
-                    "search_length": "Search length: How far in the future (empty to create a config entity)"
+                    "duration": "Duration fixed: How many hours window to find",
+                    "duration_entity": "Duration entity: Creates dynamic configuration parameter",
+                    "search_length": "Search length fixed: How far in the future to look",
+                    "search_length_entity": "Search length entity: Creates dynamic configuration parameter",
+                    "accept_cost": "Accept fixed: Accept if average below",
+                    "accept_cost_entity": "Accept cost entity: Creates dynamic configuration parameter",
+                    "accept_rate": "Accept rate fixed: Accept if average rate below",
+                    "accept_rate_entity": "Accept rate entity: Creates dynamic configuration parameter"
                 }
             },
             "user_static": {
                 "title": "Static Specifics",
                 "description": "Type specific settings",
                 "data": {
-                    "end_time": "End time: At what latest hour to complete (empty to create a config entity)"
+                    "duration": "Duration fixed: How many hours window to find",
+                    "duration_entity": "Duration entity: Creates dynamic configuration parameter",
+                    "end_time": "End time fixed: At what latest hour to complete",
+                    "end_time_entity": "End time entity: Creates dynamic configuration parameter",
+                    "accept_cost": "Accept fixed: Accept if average below",
+                    "accept_cost_entity": "Accept cost entity: Creates dynamic configuration parameter",
+                    "accept_rate": "Accept rate fixed: Accept if average rate below",
+                    "accept_rate_entity": "Accept rate entity: Creates dynamic configuration parameter"
                 }
             }
         },

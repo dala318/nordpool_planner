@@ -6,18 +6,25 @@ from typing import Any, Dict, Optional
 
 from homeassistant import config_entries
 from homeassistant.data_entry_flow import FlowResult
-from homeassistant.helpers import entity_registry as selector
+from homeassistant.helpers import selector
 
 from . import (
     DOMAIN,
     CONF_ACCEPT_COST,
+    CONF_ACCEPT_COST_ENTITY,
     CONF_ACCEPT_RATE,
+    CONF_ACCEPT_RATE_ENTITY,
     CONF_DURATION,
+    CONF_DURATION_ENTITY,
     CONF_END_TIME,
+    CONF_END_TIME_ENTITY,
     CONF_NAME,
     CONF_NP_ENTITY,
     CONF_SEARCH_LENGTH,
+    CONF_SEARCH_LENGTH_ENTITY,
     CONF_TYPE,
+    CONF_TYPE_MOVING,
+    CONF_TYPE_STATIC,
     CONF_TYPE_LIST,
 )
 
@@ -53,17 +60,9 @@ class NordpoolPlannerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 self.data[CONF_TYPE])
             self._abort_if_unique_id_configured()
 
-            # Set not defined values to none (to create config entity)
-            if CONF_DURATION not in self.data.keys():
-                self.data[CONF_DURATION] = None
-            if CONF_ACCEPT_COST not in self.data.keys():
-                self.data[CONF_ACCEPT_COST] = None
-            if CONF_ACCEPT_RATE not in self.data.keys():
-                self.data[CONF_ACCEPT_RATE] = None
-
-            if self.data[CONF_TYPE] == 'moving':
+            if self.data[CONF_TYPE] == CONF_TYPE_MOVING:
                 return await self.async_step_user_moving()
-            elif self.data[CONF_TYPE] == 'static':
+            elif self.data[CONF_TYPE] == CONF_TYPE_STATIC:
                 return await self.async_step_user_static()
             else:
                 errors["base"] = "No valid type given"
@@ -81,15 +80,6 @@ class NordpoolPlannerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 ),
                 vol.Required(CONF_NP_ENTITY): selector.SelectSelector(
                     selector.SelectSelectorConfig(options=sensor_entities),
-                ),
-                vol.Optional(CONF_DURATION): vol.All(
-                    vol.Coerce(int), vol.Range(min=0, max=8)
-                ),
-                vol.Optional(CONF_ACCEPT_RATE): vol.All(
-                    vol.Coerce(float), vol.Range(min=-10.0, max=10.0)
-                ),
-                vol.Optional(CONF_ACCEPT_COST): vol.All(
-                    vol.Coerce(float), vol.Range(min=-100.0, max=100.0)
                 ),
             }
         )
@@ -112,18 +102,51 @@ class NordpoolPlannerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Second step in config flow to set options for moving planner."""
         errors: Dict[str, str] = {}
         if user_input is not None:
+            self.options = user_input
+
+            # Validate configurations and set not defined values to None
+            if CONF_DURATION not in self.options.keys():
+                self.options[CONF_DURATION] = None
+            if not self.options[CONF_DURATION_ENTITY] and not self.options[CONF_DURATION]:
+                errors["base"] = 'If no "duration entity" choosen a "fixed duration" must be set'
+            if CONF_SEARCH_LENGTH not in self.options.keys():
+                self.options[CONF_SEARCH_LENGTH] = None
+            if not self.options[CONF_SEARCH_LENGTH_ENTITY] and not self.options[CONF_SEARCH_LENGTH]:
+                errors["base"] = 'If no "search length entity" choosen a "fixed search length" must be set'
+            if CONF_ACCEPT_COST not in self.options.keys():
+                self.options[CONF_ACCEPT_COST] = None
+            if CONF_ACCEPT_RATE not in self.options.keys():
+                self.options[CONF_ACCEPT_RATE] = None
+
             if not errors:
-                self.data['moving'] = user_input
-                # Set not defined values to none (to create config entity)
-                if CONF_DURATION not in self.data["moving"].keys():
-                    self.data["moving"][CONF_DURATION] = None
-                return self.async_create_entry(title="Nordpool Planner", data=self.data)
+                return self.async_create_entry(title=self.data[CONF_NAME], data=self.data, options=self.options)
 
         schema = vol.Schema(
             {
+                vol.Optional(CONF_DURATION): vol.All(
+                    vol.Coerce(int), vol.Range(min=0, max=8)
+                ),
+                vol.Required(CONF_DURATION_ENTITY, default=True):
+                    bool
+                ,
                 vol.Optional(CONF_SEARCH_LENGTH): vol.All(
                     vol.Coerce(int), vol.Range(min=2, max=24)
                 ),
+                vol.Required(CONF_SEARCH_LENGTH_ENTITY, default=True):
+                    bool
+                ,
+                vol.Optional(CONF_ACCEPT_COST): vol.All(
+                    vol.Coerce(float), vol.Range(min=-100.0, max=100.0)
+                ),
+                vol.Required(CONF_ACCEPT_COST_ENTITY, default=False):
+                    bool
+                ,
+                vol.Optional(CONF_ACCEPT_RATE): vol.All(
+                    vol.Coerce(float), vol.Range(min=-10.0, max=10.0)
+                ),
+                vol.Required(CONF_ACCEPT_RATE_ENTITY, default=False):
+                    bool
+                ,
             }
         )
 
@@ -139,18 +162,51 @@ class NordpoolPlannerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Second step in config flow to set options for static planner."""
         errors: Dict[str, str] = {}
         if user_input is not None:
+            self.options = user_input
+
+            # Validate configurations and set not defined values to None
+            if CONF_DURATION not in self.options.keys():
+                self.options[CONF_DURATION] = None
+            if not self.options[CONF_DURATION_ENTITY] and not self.options[CONF_DURATION]:
+                errors["base"] = 'If no "duration entity" choosen a "fixed duration" must be set'
+            if CONF_END_TIME not in self.options.keys():
+                self.options[CONF_END_TIME] = None
+            if not self.options[CONF_END_TIME_ENTITY] and not self.options[CONF_END_TIME]:
+                errors["base"] = 'If no "end time entity" choosen a "fixed end time" must be set'
+            if CONF_ACCEPT_COST not in self.options.keys():
+                self.options[CONF_ACCEPT_COST] = None
+            if CONF_ACCEPT_RATE not in self.options.keys():
+                self.options[CONF_ACCEPT_RATE] = None
+
             if not errors:
-                self.data['static'] = user_input
-                # Set not defined values to none (to create config entity)
-                if CONF_DURATION not in self.data["static"].keys():
-                    self.data["static"][CONF_DURATION] = None
-                return self.async_create_entry(title="Nordpool Planner", data=self.data)
+                return self.async_create_entry(title=self.data[CONF_NAME], data=self.data, options=self.options)
 
         schema = vol.Schema(
             {
+                vol.Optional(CONF_DURATION): vol.All(
+                    vol.Coerce(int), vol.Range(min=0, max=8)
+                ),
+                vol.Required(CONF_DURATION_ENTITY, default=True):
+                    bool
+                ,
                 vol.Optional(CONF_END_TIME): vol.All(
                     vol.Coerce(int), vol.Range(min=0, max=23)
                 ),
+                vol.Required(CONF_END_TIME_ENTITY, default=True):
+                    bool
+                ,
+                vol.Optional(CONF_ACCEPT_COST): vol.All(
+                    vol.Coerce(float), vol.Range(min=-100.0, max=100.0)
+                ),
+                vol.Required(CONF_ACCEPT_COST_ENTITY, default=False):
+                    bool
+                ,
+                vol.Optional(CONF_ACCEPT_RATE): vol.All(
+                    vol.Coerce(float), vol.Range(min=-10.0, max=10.0)
+                ),
+                vol.Required(CONF_ACCEPT_RATE_ENTITY, default=False):
+                    bool
+                ,
             }
         )
 

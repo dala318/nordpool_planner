@@ -20,3 +20,4 @@ async def async_setup_entry(
 
     # _dry_setup(hass, config, async_add_devices)
     return True
+
