@@ -210,51 +210,6 @@ class NordpoolPlanner:
             self._async_input_changed,
         )
 
-    # def register_duration_number_entity(self, entity_id) -> None:
-    #     self._duration_number_entity = entity_id
-    #     async_track_state_change_event(
-    #         self._hass,
-    #         [entity_id],
-    #         self._async_input_changed,
-    #     )
-    #     # TODO: Dont seem to work as expected!
-
-    # def register_accept_cost_number_entity(self, entity_id) -> None:
-    #     self._accept_cost_number_entity = entity_id
-    #     async_track_state_change_event(
-    #         self._hass,
-    #         [entity_id],
-    #         self._async_input_changed,
-    #     )
-    #     # TODO: Dont seem to work as expected!
-
-    # def register_accept_rate_number_entity(self, entity_id) -> None:
-    #     self._accept_rate_number_entity = entity_id
-    #     async_track_state_change_event(
-    #         self._hass,
-    #         [entity_id],
-    #         self._async_input_changed,
-    #     )
-    #     # TODO: Dont seem to work as expected!
-
-    # def register_search_length_number_entity(self, entity_id) -> None:
-    #     self._search_length_number_entity = entity_id
-    #     async_track_state_change_event(
-    #         self._hass,
-    #         [entity_id],
-    #         self._async_input_changed,
-    #     )
-    #     # TODO: Dont seem to work as expected!
-
-    # def register_end_time_number_entity(self, entity_id) -> None:
-    #     self._end_time_number_entity = entity_id
-    #     async_track_state_change_event(
-    #         self._hass,
-    #         [entity_id],
-    #         self._async_input_changed,
-    #     )
-    #     # TODO: Dont seem to work as expected!
-
     def get_device_info(self) -> DeviceInfo:
         return DeviceInfo(
             identifiers={(DOMAIN, self._config.data[CONF_TYPE])},
@@ -263,25 +218,6 @@ class NordpoolPlanner:
             entry_type=DeviceEntryType.SERVICE,
             via_device=(nordpool.DOMAIN, self._np_entity.unique_id)
         )
-
-    # def get_binary_sensor_entities(self):
-    #     # return [NordpoolPlannerBinaeySensor(self)]
-    #     pass
-
-    # def get_number_entities(self) -> list[NordpoolPlannerNumber]:
-    #     number_entities = []
-    #     if self._duration_number_entity:
-    #         number_entities.append(self._duration_number_entity)
-    #     if self._accept_cost_number_entity:
-    #         number_entities.append(self._accept_cost_number_entity)
-    #     if self._accept_rate_number_entity:
-    #         number_entities.append(self._accept_rate_number_entity)
-    #     if self._search_length_number_entity:
-    #         number_entities.append(self._search_length_number_entity)
-    #     if self._end_time_number_entity:
-    #         number_entities.append(self._end_time_number_entity)
-    #     return number_entities
-    #     # return [self._duration_number_entity]
 
     def input_changed(self, value):
         _LOGGER.debug("Sensor change event from callback: %s", value)
@@ -379,6 +315,16 @@ class NordpoolPlanner:
         self.state.now_cost_rate = self._np_entity.current_price / min_average
 
 
+# async def async_setup(hass: HomeAssistant, config: Config) -> bool:
+#     hass.data.setdefault(DOMAIN, {})
+#     return True
+
+
+# async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+#     entry_data = dict(entry.data)
+#     hass.data[DOMAIN][entry.entry_id] = entry_data
+#     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+#     return True
 async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
     """Set up this integration using UI."""
     config_entry.async_on_unload(config_entry.add_update_listener(async_reload_entry))
@@ -405,6 +351,11 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     return True
 
 
+# async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+#     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+#     if unload_ok:
+#         hass.data[DOMAIN].pop(entry.entry_id)
+#     return unload_ok
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unloading a config_flow entry"""
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
@@ -417,25 +368,6 @@ async def async_reload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> 
     """Reload the HACS config entry."""
     await async_unload_entry(hass, config_entry)
     await async_setup_entry(hass, config_entry)
-
-
-# async def async_setup(hass: HomeAssistant, config: Config) -> bool:
-#     hass.data.setdefault(DOMAIN, {})
-#     return True
-
-
-# async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-#     entry_data = dict(entry.data)
-#     hass.data[DOMAIN][entry.entry_id] = entry_data
-#     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-#     return True
-
-
-# async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-#     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
-#     if unload_ok:
-#         hass.data[DOMAIN].pop(entry.entry_id)
-#     return unload_ok
 
 
 class NordpoolEntity:
@@ -513,58 +445,3 @@ class NordpoolPlannerEntity(Entity):
     def should_poll(self):
         """No need to poll. Coordinator notifies entity of updates."""
         return False
-
-class NordpoolPlannerBinarySensor(NordpoolPlannerEntity, BinarySensorEntity):
-    _attr_icon = "mdi:flash"
-
-    def __init__(
-        self,
-        planner,
-    ) -> None:
-        super().__init__(planner=planner)
-        # Input configs
-        # self._planner = planner
-
-        # # Output states
-        # self._attr_is_on = STATE_UNKNOWN
-        # self._starts_at = STATE_UNKNOWN
-        # self._cost_at = STATE_UNKNOWN
-        # self._now_cost_rate = STATE_UNKNOWN
-
-    @property
-    def unique_id(self):
-        name = "nordpool_planner_%s_%s" % (self._planner.name, "low")
-        name = name.lower().replace(".", "")
-        return name
-
-    @property
-    def name(self):
-        return self._planner.name  + " binary"
-
-    # @property
-    # def _attr_is_on(self):
-    #     return self._planner.state.is_on
-
-    @property
-    def extra_state_attributes(self):
-        """Provide attributes for the entity"""
-        return {
-            "starts_at": self._planner.state.starts_at,
-            "cost_at": self._planner.state.cost_at,
-            "now_cost_rate": self._planner.state.now_cost_rate,
-        }
-
-    def update(self):
-        """Called from Home Assistant to update entity value"""
-        self._planner.update()
-        # self._update_np_prices()
-        # if self._np is not None:
-        #     search_length = min(
-        #         self._get_input_entity_or_default(
-        #             self._var_search_length_entity, self._search_length
-        #         ),
-        #         self._search_length,
-        #     )
-        #     self._update(dt.now().hour, search_length)
-
-
