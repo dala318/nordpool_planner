@@ -8,7 +8,7 @@ from homeassistant import config_entries
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import selector
 
-from . import (
+from .const import (
     DOMAIN,
     CONF_ACCEPT_COST,
     CONF_ACCEPT_COST_ENTITY,

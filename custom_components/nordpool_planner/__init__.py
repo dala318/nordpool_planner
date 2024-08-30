@@ -2,44 +2,41 @@ from __future__ import annotations
 import logging
 from config.custom_components import nordpool
 from homeassistant.components.binary_sensor import BinarySensorEntity
-from homeassistant.components.number import NumberEntity, NumberEntityDescription, RestoreNumber
 
-from homeassistant.components.number.const import NumberDeviceClass
 from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
-from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN, Platform
-from homeassistant.core import Config, HomeAssistant, State
+from homeassistant.const import STATE_UNKNOWN, Platform
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.event import (
     async_track_state_change_event,
-    async_track_time_interval,
 )
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import dt
 
-from ..nordpool.sensor import NordpoolSensor
+from .const import (
+    DOMAIN,
+    CONF_ACCEPT_COST,
+    CONF_ACCEPT_COST_ENTITY,
+    CONF_ACCEPT_RATE,
+    CONF_ACCEPT_RATE_ENTITY,
+    CONF_DURATION,
+    CONF_DURATION_ENTITY,
+    CONF_END_TIME,
+    CONF_END_TIME_ENTITY,
+    CONF_NAME,
+    CONF_NP_ENTITY,
+    CONF_SEARCH_LENGTH,
+    CONF_SEARCH_LENGTH_ENTITY,
+    CONF_TYPE,
+    CONF_TYPE_MOVING,
+    CONF_TYPE_STATIC,
+    CONF_TYPE_LIST,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
-DOMAIN = "nordpool_planner"
 PLATFORMS = [Platform.BINARY_SENSOR, Platform.NUMBER]
 
-CONF_NAME = "name"
-CONF_TYPE = "type"
-CONF_TYPE_MOVING = "moving"
-CONF_TYPE_STATIC = "static"
-CONF_TYPE_LIST = [CONF_TYPE_MOVING, CONF_TYPE_STATIC]
-CONF_NP_ENTITY = "np_entity"
-CONF_DURATION = "duration"
-CONF_DURATION_ENTITY = "duration_entity"
-CONF_ACCEPT_COST = "accept_cost"
-CONF_ACCEPT_COST_ENTITY = "accept_cost_entity"
-CONF_ACCEPT_RATE = "accept_rate"
-CONF_ACCEPT_RATE_ENTITY = "accept_rate_entity"
-CONF_SEARCH_LENGTH = "search_length"
-CONF_SEARCH_LENGTH_ENTITY = "search_length_entity"
-CONF_END_TIME = "end_time"
-CONF_END_TIME_ENTITY = "end_time_entity"
 
 class NordpoolPlanner:
     def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry) -> None:
@@ -58,98 +55,19 @@ class NordpoolPlanner:
 
         # Internal states
         self._np_entity = NordpoolEntity(self._config.data[CONF_NP_ENTITY])
-
-        # Configuration entities
-        self._duration_number_entity = None
-        if (
-            CONF_DURATION_ENTITY in self._config.options.keys() and
-            self._config.options[CONF_DURATION_ENTITY]
-        ):
-            self._duration_number_entity = NordpoolPlannerNumber(
-                self, callback=self.input_changed,
-                parameter=CONF_DURATION_ENTITY, start_val=3,
-                entity_description=NumberEntityDescription(
-                    key=CONF_DURATION_ENTITY,
-                    device_class=NumberDeviceClass.DURATION,
-                    native_min_value=0,
-                    native_max_value=8,
-                    native_step=1,
-                ),
-            )
-
-        self._accept_cost_number_entity = None
-        if (
-            CONF_ACCEPT_COST_ENTITY in self._config.options.keys() and
-            self._config.options[CONF_ACCEPT_COST_ENTITY]
-        ):
-            self._accept_cost_number_entity = NordpoolPlannerNumber(
-                self, callback=self.input_changed,
-                parameter=CONF_ACCEPT_COST_ENTITY, start_val=3,
-                entity_description=NumberEntityDescription(
-                    key=CONF_DURATION_ENTITY,
-                    device_class=NumberDeviceClass.MONETARY,
-                    native_min_value=-20.0,
-                    native_max_value=20.0,
-                    native_step=0.01,
-                ),
-            )
-
-        self._accept_rate_number_entity = None
-        if (
-            CONF_ACCEPT_RATE_ENTITY in self._config.options.keys() and
-            self._config.options[CONF_ACCEPT_RATE_ENTITY]
-        ):
-            self._accept_rate_number_entity = NordpoolPlannerNumber(
-                self, callback=self.input_changed,
-                parameter=CONF_ACCEPT_RATE_ENTITY, start_val=3,
-                entity_description=NumberEntityDescription(
-                    key=CONF_DURATION_ENTITY,
-                    device_class=NumberDeviceClass.DATA_RATE,
-                    native_min_value=-1.0,
-                    native_max_value=1.0,
-                    native_step=0.1,
-                ),
-            )
-
-        self._search_length_number_entity = None
-        if (CONF_SEARCH_LENGTH_ENTITY in self._config.options.keys() and
-            self._config.options[CONF_SEARCH_LENGTH_ENTITY]
-        ):
-            self._search_length_number_entity = NordpoolPlannerNumber(
-                self, callback=self.input_changed,
-                parameter=CONF_SEARCH_LENGTH_ENTITY, start_val=3,
-                entity_description=NumberEntityDescription(
-                    key=CONF_DURATION_ENTITY,
-                    device_class=NumberDeviceClass.DURATION,
-                    native_min_value=3,
-                    native_max_value=12,
-                    native_step=1,
-                ),
-            )
-
-        self._end_time_number_entity = None
-        if (CONF_END_TIME_ENTITY in self._config.options.keys() and
-            self._config.options[CONF_END_TIME_ENTITY]
-        ):
-            self._end_time_number_entity = NordpoolPlannerNumber(
-                self, callback=self.input_changed,
-                parameter=CONF_END_TIME_ENTITY, start_val=3,
-                entity_description=NumberEntityDescription(
-                    device_class=NumberDeviceClass.DURATION,
-                    native_min_value=0,
-                    native_max_value=23,
-                    native_step=1,
-                ),
-            )
-
-        state_change_entities = [e.unique_id for e in self.get_number_entities()]
-        state_change_entities.append(self._np_entity.unique_id)
         async_track_state_change_event(
             self._hass,
-            state_change_entities,
+            [self._np_entity.unique_id],
             self._async_input_changed,
         )
         # TODO: Dont seem to work as expected!
+
+        # Configuration entities
+        self._duration_number_entity = ""
+        self._accept_cost_number_entity = ""
+        self._accept_rate_number_entity = ""
+        self._search_length_number_entity = ""
+        self._end_time_number_entity = ""
 
         # Output states
         self.state = NordpoolPlannerState()
@@ -162,17 +80,23 @@ class NordpoolPlanner:
     def _duration(self) -> int:
         if self._duration_number_entity:
             try:
-                entity = self._hass.states.get(self._duration_number_entity.entity_id)
+                entity = self._hass.states.get(self._duration_number_entity)
                 state = entity.state
-                value = int(state)
+                value = int(float(state))
                 # if value is not None:
                 #     return value
                 return value
-            except TypeError:
+            except (TypeError, ValueError):
                 _LOGGER.warning(
                     'Could not convert value "%s" of entity %s to int',
                     state,
-                    self._duration_number_entity.name,
+                    self._duration_number_entity,
+                )
+            except Exception as e:
+                _LOGGER.error(
+                    'Unknown error wen reading "%s": %s',
+                    self._accept_cost_number_entity,
+                    e,
                 )
         elif (
             CONF_DURATION in self._config.options.keys()
@@ -187,16 +111,22 @@ class NordpoolPlanner:
     def _accept_cost(self) -> float:
         if self._accept_cost_number_entity:
             try:
-                state = self._hass.states.get(self._accept_cost_number_entity.entity_id).state
+                state = self._hass.states.get(self._accept_cost_number_entity).state
                 value = float(state)
                 # if value is not None:
                 #     return value
                 return value
-            except TypeError:
+            except (TypeError, ValueError):
                 _LOGGER.warning(
                     'Could not convert value "%s" of entity %s to int',
                     state,
-                    self._accept_cost_number_entity.name,
+                    self._accept_cost_number_entity,
+                )
+            except Exception as e:
+                _LOGGER.error(
+                    'Unknown error wen reading "%s": %s',
+                    self._accept_cost_number_entity,
+                    e,
                 )
         elif (
             CONF_ACCEPT_COST in self._config.options.keys()
@@ -211,16 +141,22 @@ class NordpoolPlanner:
     def _accept_rate(self) -> float:
         if self._accept_rate_number_entity:
             try:
-                state = self._hass.states.get(self._accept_rate_number_entity.entity_id).state
+                state = self._hass.states.get(self._accept_rate_number_entity).state
                 value = float(state)
                 # if value is not None:
                 #     return value
                 return value
-            except TypeError:
+            except (TypeError, ValueError):
                 _LOGGER.warning(
                     'Could not convert value "%s" of entity %s to int',
                     state,
-                    self._accept_rate_number_entity.name,
+                    self._accept_rate_number_entity,
+                )
+            except Exception as e:
+                _LOGGER.error(
+                    'Unknown error wen reading "%s": %s',
+                    self._accept_cost_number_entity,
+                    e,
                 )
         elif (
             CONF_ACCEPT_RATE in self._config.options.keys()
@@ -250,6 +186,75 @@ class NordpoolPlanner:
             return self._config.options[CONF_END_TIME]
         return 6
 
+    def register_number_entity(self, entity_id, conf_key) -> None:
+        if conf_key == CONF_DURATION_ENTITY:
+            self._duration_number_entity = entity_id
+        elif conf_key == CONF_ACCEPT_COST_ENTITY:
+            self._accept_cost_number_entity = entity_id
+        elif conf_key == CONF_ACCEPT_RATE_ENTITY:
+            self._accept_rate_number_entity = entity_id
+        elif conf_key == CONF_SEARCH_LENGTH_ENTITY:
+            self._search_length_number_entity = entity_id
+        elif conf_key == CONF_END_TIME_ENTITY:
+            self._end_time_number_entity = entity_id
+        else:
+            _LOGGER.warning(
+                'An entity "%s" was registred for callback but no match for key "%s"',
+                entity_id,
+                conf_key
+            )
+        # TODO: Dont seem to work as expected!
+        async_track_state_change_event(
+            self._hass,
+            [entity_id],
+            self._async_input_changed,
+        )
+
+    # def register_duration_number_entity(self, entity_id) -> None:
+    #     self._duration_number_entity = entity_id
+    #     async_track_state_change_event(
+    #         self._hass,
+    #         [entity_id],
+    #         self._async_input_changed,
+    #     )
+    #     # TODO: Dont seem to work as expected!
+
+    # def register_accept_cost_number_entity(self, entity_id) -> None:
+    #     self._accept_cost_number_entity = entity_id
+    #     async_track_state_change_event(
+    #         self._hass,
+    #         [entity_id],
+    #         self._async_input_changed,
+    #     )
+    #     # TODO: Dont seem to work as expected!
+
+    # def register_accept_rate_number_entity(self, entity_id) -> None:
+    #     self._accept_rate_number_entity = entity_id
+    #     async_track_state_change_event(
+    #         self._hass,
+    #         [entity_id],
+    #         self._async_input_changed,
+    #     )
+    #     # TODO: Dont seem to work as expected!
+
+    # def register_search_length_number_entity(self, entity_id) -> None:
+    #     self._search_length_number_entity = entity_id
+    #     async_track_state_change_event(
+    #         self._hass,
+    #         [entity_id],
+    #         self._async_input_changed,
+    #     )
+    #     # TODO: Dont seem to work as expected!
+
+    # def register_end_time_number_entity(self, entity_id) -> None:
+    #     self._end_time_number_entity = entity_id
+    #     async_track_state_change_event(
+    #         self._hass,
+    #         [entity_id],
+    #         self._async_input_changed,
+    #     )
+    #     # TODO: Dont seem to work as expected!
+
     def get_device_info(self) -> DeviceInfo:
         return DeviceInfo(
             identifiers={(DOMAIN, self._config.data[CONF_TYPE])},
@@ -259,24 +264,24 @@ class NordpoolPlanner:
             via_device=(nordpool.DOMAIN, self._np_entity.unique_id)
         )
 
-    def get_binary_sensor_entities(self):
-        # return [NordpoolPlannerBinaeySensor(self)]
-        pass
+    # def get_binary_sensor_entities(self):
+    #     # return [NordpoolPlannerBinaeySensor(self)]
+    #     pass
 
-    def get_number_entities(self) -> list[NordpoolPlannerNumber]:
-        number_entities = []
-        if self._duration_number_entity:
-            number_entities.append(self._duration_number_entity)
-        if self._accept_cost_number_entity:
-            number_entities.append(self._accept_cost_number_entity)
-        if self._accept_rate_number_entity:
-            number_entities.append(self._accept_rate_number_entity)
-        if self._search_length_number_entity:
-            number_entities.append(self._search_length_number_entity)
-        if self._end_time_number_entity:
-            number_entities.append(self._end_time_number_entity)
-        return number_entities
-        # return [self._duration_number_entity]
+    # def get_number_entities(self) -> list[NordpoolPlannerNumber]:
+    #     number_entities = []
+    #     if self._duration_number_entity:
+    #         number_entities.append(self._duration_number_entity)
+    #     if self._accept_cost_number_entity:
+    #         number_entities.append(self._accept_cost_number_entity)
+    #     if self._accept_rate_number_entity:
+    #         number_entities.append(self._accept_rate_number_entity)
+    #     if self._search_length_number_entity:
+    #         number_entities.append(self._search_length_number_entity)
+    #     if self._end_time_number_entity:
+    #         number_entities.append(self._end_time_number_entity)
+    #     return number_entities
+    #     # return [self._duration_number_entity]
 
     def input_changed(self, value):
         _LOGGER.debug("Sensor change event from callback: %s", value)
@@ -292,6 +297,13 @@ class NordpoolPlanner:
         self._update(dt.now().hour, self._search_length)
 
     def _update(self, start_hour, search_length: int):
+        # TODO: Remove, only for debugging
+        d = self._duration
+        c = self._accept_cost
+        r = self._accept_rate
+        l = self._search_length
+        e = self._end_time
+
         self._np_entity.update(self._hass)
         if not self._np_entity.valid:
             _LOGGER.warning(
@@ -311,6 +323,9 @@ class NordpoolPlanner:
         ):
             duration = self._duration
             if duration is None:
+                _LOGGER.warning(
+                    "Aborting update since no valid Duration"
+                )
                 return
 
             for i in range(
@@ -467,6 +482,9 @@ class NordpoolEntity:
                 "Nordpool sensor %s was updated sucsessfully",
                 self._unique_id
             )
+            if self._np is None:
+                pass
+                # TODO: Set unit_of_measuremetn of applicable number entities
             self._np = np
 
         if self._np is None:
@@ -548,82 +566,5 @@ class NordpoolPlannerBinarySensor(NordpoolPlannerEntity, BinarySensorEntity):
         #         self._search_length,
         #     )
         #     self._update(dt.now().hour, search_length)
-
-
-class NordpoolPlannerNumber(NordpoolPlannerEntity, RestoreNumber):
-    # _attr_icon = "mdi:flash"
-    entity_description: NumberEntityDescription
-
-    def __init__(
-        self,
-        planner,
-        callback,
-        parameter,
-        start_val,
-        entity_description: NumberEntityDescription,
-    ) -> None:
-        super().__init__(planner)
-        # Input configs
-        self._callback = callback
-        self._parameter = parameter
-        self._attr_name = self._planner.name  + " " + self._parameter
-        self._attr_unique_id = ("nordpool_planner_" + self._attr_name).lower().replace(".", "").replace(" ", "_")
-        self._attr_native_value = start_val
-        self.entity_description = entity_description
-        # self.entity_description.min_value = min_val
-        # self.entity_description.max_value = max_val
-        # self.entity_description.step = step
-
-    # @property
-    # def unique_id(self):
-    #     return ("nordpool_planner_%s_%s" % (self._planner.name, self._parameter)).lower().replace(".", "").replace(" ", "_")
-
-    # @property
-    # def native_value(self):
-    #     return self._value
-
-    # @property
-    # def unit(self) -> str:
-    #     """Unit"""
-    #     return self._price_type
-
-    # @property
-    # def unit_of_measurement(self) -> str:  # FIXME
-    #     """Return the unit of measurement this sensor expresses itself in."""
-    #     _currency = self._currency
-    #     if self._use_cents is True:
-    #         # Convert unit of measurement to cents based on chosen currency
-    #         _currency = _CURRENTY_TO_CENTS[_currency]
-    #     return "%s/%s" % (_currency, self._price_type)
-
-    # def set_native_value(self, value: float) -> None:
-    #     """Update the current value."""
-    #     # self._callback(value)
-    #     self._attr_native_value = value
-    #     _LOGGER.debug(
-    #         "Got new value %s for %s",
-    #         self.name,
-    #         value,
-    #     )
-
-    async def async_added_to_hass(self) -> None:
-        """Load the last known state when added to hass."""
-        await super().async_added_to_hass()
-        if (last_state := await self.async_get_last_state()) and (
-            last_number_data := await self.async_get_last_number_data()
-        ):
-            if last_state.state not in (STATE_UNKNOWN, STATE_UNAVAILABLE):
-                self._attr_native_value = last_number_data.native_value
-
-    async def async_set_native_value(self, value: float) -> None:
-        """Update the current value."""
-        self._attr_native_value = value
-        _LOGGER.debug(
-            "Got new async value %s for %s",
-            value,
-            self.name,
-        )
-        self._callback(value)
-        self.async_schedule_update_ha_state()
 
 
