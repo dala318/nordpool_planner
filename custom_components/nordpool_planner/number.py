@@ -146,7 +146,7 @@ class NordpoolPlannerNumber(NordpoolPlannerEntity, RestoreNumber):
         ):
             if last_state.state not in (STATE_UNKNOWN, STATE_UNAVAILABLE):
                 self._attr_native_value = last_number_data.native_value
-        self._planner.register_number_entity(self.entity_id, self.entity_description.key)
+        self._planner.register_input_entity_id(self.entity_id, self.entity_description.key)
 
     async def async_set_native_value(self, value: float) -> None:
         """Update the current value."""

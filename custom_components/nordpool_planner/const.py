@@ -6,6 +6,7 @@ CONF_TYPE_MOVING = "moving"
 CONF_TYPE_STATIC = "static"
 CONF_TYPE_LIST = [CONF_TYPE_MOVING, CONF_TYPE_STATIC]
 CONF_NP_ENTITY = "np_entity"
+CONF_LOW_COST_ENTITY = "low_cost_entity"
 CONF_DURATION = "duration"
 CONF_DURATION_ENTITY = "duration_entity"
 CONF_ACCEPT_COST = "accept_cost"

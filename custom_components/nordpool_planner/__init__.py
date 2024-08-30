@@ -14,6 +14,7 @@ from homeassistant.helpers.event import (
 from homeassistant.util import dt
 
 from .const import (
+    CONF_LOW_COST_ENTITY,
     DOMAIN,
     CONF_ACCEPT_COST,
     CONF_ACCEPT_COST_ENTITY,
@@ -68,6 +69,11 @@ class NordpoolPlanner:
         self._accept_rate_number_entity = ""
         self._search_length_number_entity = ""
         self._end_time_number_entity = ""
+        # TODO: Make dictionary?
+
+        # Output entities
+        self._low_cost_binary_sensor_entity = None
+        # TODO: Make list?
 
         # Output states
         self.state = NordpoolPlannerState()
@@ -186,7 +192,8 @@ class NordpoolPlanner:
             return self._config.options[CONF_END_TIME]
         return 6
 
-    def register_number_entity(self, entity_id, conf_key) -> None:
+    def register_input_entity_id(self, entity_id, conf_key) -> None:
+        # Input numbers
         if conf_key == CONF_DURATION_ENTITY:
             self._duration_number_entity = entity_id
         elif conf_key == CONF_ACCEPT_COST_ENTITY:
@@ -209,6 +216,18 @@ class NordpoolPlanner:
             [entity_id],
             self._async_input_changed,
         )
+
+    def register_output_listner_entity(self, entity, conf_key="") -> None:
+        # Output binary sensors
+        if conf_key == CONF_LOW_COST_ENTITY:
+            self._low_cost_binary_sensor_entity = entity
+        else:
+            pass
+        #     _LOGGER.warning(
+        #         'An entity "%s" was registred for callback but no match for key "%s"',
+        #         entity.entity_id,
+        #         conf_key
+        #     )
 
     def get_device_info(self) -> DeviceInfo:
         return DeviceInfo(
@@ -313,6 +332,9 @@ class NordpoolPlanner:
         )
         self.state.cost_at = min_average
         self.state.now_cost_rate = self._np_entity.current_price / min_average
+
+        if self._low_cost_binary_sensor_entity:
+            self._low_cost_binary_sensor_entity.update_callback()
 
 
 # async def async_setup(hass: HomeAssistant, config: Config) -> bool:

@@ -6,6 +6,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
 from .const import(
+    CONF_LOW_COST_ENTITY,
     DOMAIN,
 )
 
@@ -16,8 +17,8 @@ from . import (
 
 _LOGGER = logging.getLogger(__name__)
 
-LOW_PRICE_ENTITY_DESCRIPTION = BinarySensorEntityDescription(
-    key='low_price',
+LOW_COST_ENTITY_DESCRIPTION = BinarySensorEntityDescription(
+    key=CONF_LOW_COST_ENTITY,
     # device_class=BinarySensorDeviceClass.???,
 )
 
@@ -31,7 +32,7 @@ async def async_setup_entry(
 
     entities.append(NordpoolPlannerBinarySensor(
         planner,
-        entity_description=LOW_PRICE_ENTITY_DESCRIPTION))
+        entity_description=LOW_COST_ENTITY_DESCRIPTION))
 
     # TODO: Add for other non-standard binary sensor
     # if (CONF_DURATION_ENTITY in config_entry.options.keys() and
@@ -78,9 +79,25 @@ class NordpoolPlannerBinarySensor(NordpoolPlannerEntity, BinarySensorEntity):
             "now_cost_rate": self._planner.state.now_cost_rate,
         }
 
+    async def async_added_to_hass(self) -> None:
+        """Load the last known state when added to hass."""
+        await super().async_added_to_hass()
+        # if (last_state := await self.async_get_last_state()) and (
+        #     last_number_data := await self.async_get_last_number_data()
+        # ):
+        #     if last_state.state not in (STATE_UNKNOWN, STATE_UNAVAILABLE):
+        #         self._attr_native_value = last_number_data.native_value
+        self._planner.register_output_listner_entity(self, self.entity_description.key)
+
+
+    def update_callback(self) -> None:
+        self.schedule_update_ha_state()
+
     def update(self):
         """Called from Home Assistant to update entity value"""
-        self._planner.update()
+
+        # self._planner.update()
+
         # self._update_np_prices()
         # if self._np is not None:
         #     search_length = min(
@@ -90,5 +107,3 @@ class NordpoolPlannerBinarySensor(NordpoolPlannerEntity, BinarySensorEntity):
         #         self._search_length,
         #     )
         #     self._update(dt.now().hour, search_length)
-
-
