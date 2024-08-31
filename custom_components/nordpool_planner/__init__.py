@@ -14,29 +14,75 @@ from homeassistant.helpers.event import (
 from homeassistant.util import dt
 
 from .const import (
-    CONF_LOW_COST_ENTITY,
     DOMAIN,
-    CONF_ACCEPT_COST,
     CONF_ACCEPT_COST_ENTITY,
-    CONF_ACCEPT_RATE,
     CONF_ACCEPT_RATE_ENTITY,
-    CONF_DURATION,
     CONF_DURATION_ENTITY,
-    CONF_END_TIME,
     CONF_END_TIME_ENTITY,
-    CONF_NAME,
+    CONF_LOW_COST_ENTITY,
     CONF_NP_ENTITY,
-    CONF_SEARCH_LENGTH,
     CONF_SEARCH_LENGTH_ENTITY,
     CONF_TYPE,
-    CONF_TYPE_MOVING,
-    CONF_TYPE_STATIC,
-    CONF_TYPE_LIST,
 )
 
 _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS = [Platform.BINARY_SENSOR, Platform.NUMBER]
+
+
+# async def async_setup(hass: HomeAssistant, config: Config) -> bool:
+#     hass.data.setdefault(DOMAIN, {})
+#     return True
+
+
+# async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+#     entry_data = dict(entry.data)
+#     hass.data[DOMAIN][entry.entry_id] = entry_data
+#     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+#     return True
+async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+    """Set up this integration using UI."""
+    config_entry.async_on_unload(config_entry.add_update_listener(async_reload_entry))
+
+    if DOMAIN not in hass.data:
+        hass.data[DOMAIN] = {}
+
+    if config_entry.entry_id not in hass.data[DOMAIN]:
+        hass.data[DOMAIN][config_entry.entry_id] = planner = NordpoolPlanner(
+            hass, config_entry
+        )
+    else:
+        planner = hass.data[DOMAIN][config_entry.entry_id]
+    # await planner.async_config_entry_first_refresh()
+
+    if config_entry is not None:
+        if config_entry.source == SOURCE_IMPORT:
+            hass.async_create_task(
+                hass.config_entries.async_remove(config_entry.entry_id)
+            )
+            return False
+
+    await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
+    return True
+
+
+# async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+#     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+#     if unload_ok:
+#         hass.data[DOMAIN].pop(entry.entry_id)
+#     return unload_ok
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Unloading a config_flow entry"""
+    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    if unload_ok:
+        hass.data[DOMAIN].pop(entry.entry_id)
+    return unload_ok
+
+
+async def async_reload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> None:
+    """Reload the HACS config entry."""
+    await async_unload_entry(hass, config_entry)
+    await async_setup_entry(hass, config_entry)
 
 
 class NordpoolPlanner:
@@ -84,113 +130,50 @@ class NordpoolPlanner:
 
     @property
     def _duration(self) -> int:
-        if self._duration_number_entity:
-            try:
-                entity = self._hass.states.get(self._duration_number_entity)
-                state = entity.state
-                value = int(float(state))
-                # if value is not None:
-                #     return value
-                return value
-            except (TypeError, ValueError):
-                _LOGGER.warning(
-                    'Could not convert value "%s" of entity %s to int',
-                    state,
-                    self._duration_number_entity,
-                )
-            except Exception as e:
-                _LOGGER.error(
-                    'Unknown error wen reading "%s": %s',
-                    self._accept_cost_number_entity,
-                    e,
-                )
-        elif (
-            CONF_DURATION in self._config.options.keys()
-            and self._config.options[CONF_DURATION]
-        ):
-            return self._config.options[CONF_DURATION]
-        else:
-            _LOGGER.error("No duration value or entity defined")
-        return None
-
-    @property
-    def _accept_cost(self) -> float:
-        if self._accept_cost_number_entity:
-            try:
-                state = self._hass.states.get(self._accept_cost_number_entity).state
-                value = float(state)
-                # if value is not None:
-                #     return value
-                return value
-            except (TypeError, ValueError):
-                _LOGGER.warning(
-                    'Could not convert value "%s" of entity %s to int',
-                    state,
-                    self._accept_cost_number_entity,
-                )
-            except Exception as e:
-                _LOGGER.error(
-                    'Unknown error wen reading "%s": %s',
-                    self._accept_cost_number_entity,
-                    e,
-                )
-        elif (
-            CONF_ACCEPT_COST in self._config.options.keys()
-            and self._config.options[CONF_ACCEPT_COST]
-        ):
-            return self._config.options[CONF_ACCEPT_COST]
-        else:
-            _LOGGER.debug("No accept cost value or entity defined")
-        return None
-
-    @property
-    def _accept_rate(self) -> float:
-        if self._accept_rate_number_entity:
-            try:
-                state = self._hass.states.get(self._accept_rate_number_entity).state
-                value = float(state)
-                # if value is not None:
-                #     return value
-                return value
-            except (TypeError, ValueError):
-                _LOGGER.warning(
-                    'Could not convert value "%s" of entity %s to int',
-                    state,
-                    self._accept_rate_number_entity,
-                )
-            except Exception as e:
-                _LOGGER.error(
-                    'Unknown error wen reading "%s": %s',
-                    self._accept_cost_number_entity,
-                    e,
-                )
-        elif (
-            CONF_ACCEPT_RATE in self._config.options.keys()
-            and self._config.options[CONF_ACCEPT_RATE]
-        ):
-            return self._config.options[CONF_ACCEPT_RATE]
-        else:
-            _LOGGER.debug("No accept rate value or entity defined")
-        return None
-
+        return self.get_number_entity_value(self._duration_number_entity, integer=True)
 
     @property
     def _search_length(self) -> int:
-        if (
-            CONF_SEARCH_LENGTH in self._config.options.keys()
-            and self._config.options[CONF_SEARCH_LENGTH]
-        ):
-            return self._config.options[CONF_SEARCH_LENGTH]
-        return 12
+        return self.get_number_entity_value(self._search_length_number_entity, integer=True)
 
     @property
     def _end_time(self) -> int:
-        if (
-            CONF_END_TIME in self._config.options.keys()
-            and self._config.options[CONF_END_TIME]
-        ):
-            return self._config.options[CONF_END_TIME]
-        return 6
+        return self.get_number_entity_value(self._end_time_number_entity, integer=True)
+
+    @property
+    def _accept_cost(self) -> float:
+        return self.get_number_entity_value(self._accept_cost_number_entity)
+
+    @property
+    def _accept_rate(self) -> float:
+        return self.get_number_entity_value(self._accept_rate_number_entity)
+
+    def get_number_entity_value(self, entity_id: str, integer:bool=False) -> float|int|None:
+        if entity_id:
+            try:
+                entity = self._hass.states.get(entity_id)
+                state = entity.state
+                value = float(state)
+                # if value is not None:
+                #     return value
+                if integer:
+                    return int(value)
+                return value
+            except (TypeError, ValueError):
+                _LOGGER.warning(
+                    'Could not convert value "%s" of entity %s to expected format',
+                    state,
+                    entity_id,
+                )
+            except Exception as e:
+                _LOGGER.error(
+                    'Unknown error wen reading and converting "%s": %s',
+                    entity_id,
+                    e,
+                )
+        else:
+            _LOGGER.debug("No entity defined")
+        return None
 
     def register_input_entity_id(self, entity_id, conf_key) -> None:
         # Input numbers
@@ -222,12 +205,11 @@ class NordpoolPlanner:
         if conf_key == CONF_LOW_COST_ENTITY:
             self._low_cost_binary_sensor_entity = entity
         else:
-            pass
-        #     _LOGGER.warning(
-        #         'An entity "%s" was registred for callback but no match for key "%s"',
-        #         entity.entity_id,
-        #         conf_key
-        #     )
+            _LOGGER.warning(
+                'An entity "%s" was registred for update but no match for key "%s"',
+                entity.entity_id,
+                conf_key
+            )
 
     def get_device_info(self) -> DeviceInfo:
         return DeviceInfo(
@@ -252,12 +234,16 @@ class NordpoolPlanner:
         self._update(dt.now().hour, self._search_length)
 
     def _update(self, start_hour, search_length: int):
-        # TODO: Remove, only for debugging
-        d = self._duration
-        c = self._accept_cost
-        r = self._accept_rate
-        l = self._search_length
-        e = self._end_time
+        _LOGGER.debug(
+            "Updating planner"
+        )
+
+        # # TODO: Remove, only for debugging
+        # d = self._duration
+        # c = self._accept_cost
+        # r = self._accept_rate
+        # l = self._search_length
+        # e = self._end_time
 
         self._np_entity.update(self._hass)
         if not self._np_entity.valid:
@@ -335,61 +321,6 @@ class NordpoolPlanner:
 
         if self._low_cost_binary_sensor_entity:
             self._low_cost_binary_sensor_entity.update_callback()
-
-
-# async def async_setup(hass: HomeAssistant, config: Config) -> bool:
-#     hass.data.setdefault(DOMAIN, {})
-#     return True
-
-
-# async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-#     entry_data = dict(entry.data)
-#     hass.data[DOMAIN][entry.entry_id] = entry_data
-#     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-#     return True
-async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
-    """Set up this integration using UI."""
-    config_entry.async_on_unload(config_entry.add_update_listener(async_reload_entry))
-
-    if DOMAIN not in hass.data:
-        hass.data[DOMAIN] = {}
-
-    if config_entry.entry_id not in hass.data[DOMAIN]:
-        hass.data[DOMAIN][config_entry.entry_id] = planner = NordpoolPlanner(
-            hass, config_entry
-        )
-    else:
-        planner = hass.data[DOMAIN][config_entry.entry_id]
-    # await planner.async_config_entry_first_refresh()
-
-    if config_entry is not None:
-        if config_entry.source == SOURCE_IMPORT:
-            hass.async_create_task(
-                hass.config_entries.async_remove(config_entry.entry_id)
-            )
-            return False
-
-    await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
-    return True
-
-
-# async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-#     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
-#     if unload_ok:
-#         hass.data[DOMAIN].pop(entry.entry_id)
-#     return unload_ok
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Unloading a config_flow entry"""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
-    if unload_ok:
-        hass.data[DOMAIN].pop(entry.entry_id)
-    return unload_ok
-
-
-async def async_reload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> None:
-    """Reload the HACS config entry."""
-    await async_unload_entry(hass, config_entry)
-    await async_setup_entry(hass, config_entry)
 
 
 class NordpoolEntity:

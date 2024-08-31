@@ -30,17 +30,12 @@ async def async_setup_entry(
     planner: NordpoolPlanner = hass.data[DOMAIN][config_entry.entry_id]
     entities = []
 
-    entities.append(NordpoolPlannerBinarySensor(
-        planner,
-        entity_description=LOW_COST_ENTITY_DESCRIPTION))
-
-    # TODO: Add for other non-standard binary sensor
-    # if (CONF_DURATION_ENTITY in config_entry.options.keys() and
-    #     config_entry.options[CONF_DURATION_ENTITY]
-    # ):
-    #     entities.append(NordpoolPlannerNumber(
-    #         planner, callback=planner.input_changed, start_val=3,
-    #         entity_description=DURATION_ENTITY_DESCRIPTION))
+    if (CONF_LOW_COST_ENTITY in config_entry.data.keys() and
+        config_entry.data[CONF_LOW_COST_ENTITY]
+    ):
+        entities.append(NordpoolPlannerBinarySensor(
+            planner,
+            entity_description=LOW_COST_ENTITY_DESCRIPTION))
 
     async_add_entities(entities)
     return True
@@ -59,15 +54,13 @@ class NordpoolPlannerBinarySensor(NordpoolPlannerEntity, BinarySensorEntity):
         self._attr_name = self._planner.name  + " " + entity_description.key.replace("_", " ")
         self._attr_unique_id = ("nordpool_planner_" + self._attr_name).lower().replace(".", "").replace(" ", "_")
 
-        # # Output states
-        # self._attr_is_on = STATE_UNKNOWN
-        # self._starts_at = STATE_UNKNOWN
-        # self._cost_at = STATE_UNKNOWN
-        # self._now_cost_rate = STATE_UNKNOWN
-
-
     @property
     def is_on(self):
+        _LOGGER.debug(
+            'Reading state "%s" of binary sensor "%s"',
+            self._planner.state.is_on,
+            self.unique_id,
+        )
         return self._planner.state.is_on
 
     @property
@@ -82,21 +75,16 @@ class NordpoolPlannerBinarySensor(NordpoolPlannerEntity, BinarySensorEntity):
     async def async_added_to_hass(self) -> None:
         """Load the last known state when added to hass."""
         await super().async_added_to_hass()
-        # if (last_state := await self.async_get_last_state()) and (
-        #     last_number_data := await self.async_get_last_number_data()
-        # ):
-        #     if last_state.state not in (STATE_UNKNOWN, STATE_UNAVAILABLE):
-        #         self._attr_native_value = last_number_data.native_value
         self._planner.register_output_listner_entity(self, self.entity_description.key)
 
 
     def update_callback(self) -> None:
         self.schedule_update_ha_state()
 
-    def update(self):
-        """Called from Home Assistant to update entity value"""
+    # async def async_update(self):
+    #     """Called from Home Assistant to update entity value"""
 
-        # self._planner.update()
+    #     self._planner.update()
 
         # self._update_np_prices()
         # if self._np is not None:

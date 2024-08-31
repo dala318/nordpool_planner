@@ -70,36 +70,36 @@ async def async_setup_entry(
     planner: NordpoolPlanner = hass.data[DOMAIN][config_entry.entry_id]
     entities = []
 
-    if (CONF_DURATION_ENTITY in config_entry.options.keys() and
-        config_entry.options[CONF_DURATION_ENTITY]
+    if (CONF_DURATION_ENTITY in config_entry.data.keys() and
+        config_entry.data[CONF_DURATION_ENTITY]
     ):
         entities.append(NordpoolPlannerNumber(
             planner, callback=planner.input_changed, start_val=3,
             entity_description=DURATION_ENTITY_DESCRIPTION))
 
-    if (CONF_ACCEPT_COST_ENTITY in config_entry.options.keys() and
-        config_entry.options[CONF_ACCEPT_COST_ENTITY]
+    if (CONF_ACCEPT_COST_ENTITY in config_entry.data.keys() and
+        config_entry.data[CONF_ACCEPT_COST_ENTITY]
     ):
         entities.append(NordpoolPlannerNumber(
             planner, callback=planner.input_changed, start_val=0.0,
             entity_description=ACCEPT_COST_ENTITY_DESCRIPTION))
 
-    if (CONF_ACCEPT_RATE_ENTITY in config_entry.options.keys() and
-        config_entry.options[CONF_ACCEPT_RATE_ENTITY]
+    if (CONF_ACCEPT_RATE_ENTITY in config_entry.data.keys() and
+        config_entry.data[CONF_ACCEPT_RATE_ENTITY]
     ):
         entities.append(NordpoolPlannerNumber(
             planner, callback=planner.input_changed, start_val=0.1,
             entity_description=ACCEPT_RATE_ENTITY_DESCRIPTION))
 
-    if (CONF_SEARCH_LENGTH_ENTITY in config_entry.options.keys() and
-        config_entry.options[CONF_SEARCH_LENGTH_ENTITY]
+    if (CONF_SEARCH_LENGTH_ENTITY in config_entry.data.keys() and
+        config_entry.data[CONF_SEARCH_LENGTH_ENTITY]
     ):
         entities.append(NordpoolPlannerNumber(
             planner, callback=planner.input_changed, start_val=10,
             entity_description=SEARCH_LENGTH_ENTITY_DESCRIPTION))
 
-    if (CONF_END_TIME_ENTITY in config_entry.options.keys() and
-        config_entry.options[CONF_END_TIME_ENTITY]
+    if (CONF_END_TIME_ENTITY in config_entry.data.keys() and
+        config_entry.data[CONF_END_TIME_ENTITY]
     ):
         entities.append(NordpoolPlannerNumber(
             planner, callback=planner.input_changed, start_val=7,

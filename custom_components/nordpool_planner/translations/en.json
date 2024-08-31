@@ -8,35 +8,12 @@
                 "data": {
                     "name": "Name of planner",
                     "type": "Planner type",
-                    "np_entity": "Nordpool entity"
-                }
-            },
-            "user_moving": {
-                "title": "Moving Specifics",
-                "description": "Type specific settings",
-                "data": {
-                    "duration": "Duration fixed: How many hours window to find",
-                    "duration_entity": "Duration entity: Creates dynamic configuration parameter",
-                    "search_length": "Search length fixed: How far in the future to look",
-                    "search_length_entity": "Search length entity: Creates dynamic configuration parameter",
-                    "accept_cost": "Accept fixed: Accept if average below",
-                    "accept_cost_entity": "Accept cost entity: Creates dynamic configuration parameter",
-                    "accept_rate": "Accept rate fixed: Accept if average rate below",
-                    "accept_rate_entity": "Accept rate entity: Creates dynamic configuration parameter"
-                }
-            },
-            "user_static": {
-                "title": "Static Specifics",
-                "description": "Type specific settings",
-                "data": {
-                    "duration": "Duration fixed: How many hours window to find",
-                    "duration_entity": "Duration entity: Creates dynamic configuration parameter",
-                    "end_time": "End time fixed: At what latest hour to complete",
-                    "end_time_entity": "End time entity: Creates dynamic configuration parameter",
-                    "accept_cost": "Accept fixed: Accept if average below",
-                    "accept_cost_entity": "Accept cost entity: Creates dynamic configuration parameter",
-                    "accept_rate": "Accept rate fixed: Accept if average rate below",
-                    "accept_rate_entity": "Accept rate entity: Creates dynamic configuration parameter"
+                    "np_entity": "Nordpool entity",
+                    "duration_entity": "Duration: Creates dynamic configuration parameter",
+                    "search_length_entity": "Search length: Creates dynamic configuration parameter",
+                    "end_time_entity": "End time: Creates dynamic configuration parameter",
+                    "accept_cost_entity": "Accept cost: Creates a configuration parameter that turn on if cost below",
+                    "accept_rate_entity": "Accept rate: Creates a configuration parameter that turn on if rate to daily average below"
                 }
             }
         },
