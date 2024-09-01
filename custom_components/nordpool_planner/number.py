@@ -151,7 +151,7 @@ class NordpoolPlannerNumber(NordpoolPlannerEntity, RestoreNumber):
             .replace(".", "")
             .replace(" ", "_")
         )
-        self._attr_native_value = start_val
+        self._default_value = start_val
 
     # @property
     # def unit(self) -> str:
@@ -175,6 +175,8 @@ class NordpoolPlannerNumber(NordpoolPlannerEntity, RestoreNumber):
         ):
             if last_state.state not in (STATE_UNKNOWN, STATE_UNAVAILABLE):
                 self._attr_native_value = last_number_data.native_value
+        else:
+            self._attr_native_value = self._default_value
         self._planner.register_input_entity_id(
             self.entity_id, self.entity_description.key
         )
