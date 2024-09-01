@@ -307,25 +307,25 @@ class NordpoolPlanner:
         # Write result to entity
         if now.hour >= min_start_hour:
             # self._attr_is_on = True
-            self.state.is_on = True
+            self.low_cost_state.is_on = True
         else:
             # self._attr_is_on = False
-            self.state.is_on = False
+            self.low_cost_state.is_on = False
 
         start = dt_util.parse_datetime(f"{now.year}-{now.month}-{now.day} {0}:{0}")
         # Check if next day
         if min_start_hour >= 24:
             start += dt_util.parse_duration("1 day")
             min_start_hour -= 24
-        self.state.starts_at = "%04d-%02d-%02d %02d:%02d" % (
+        self.low_cost_state.starts_at = "%04d-%02d-%02d %02d:%02d" % (
             start.year,
             start.month,
             start.day,
             min_start_hour,
             0,
         )
-        self.state.cost_at = min_average
-        self.state.now_cost_rate = self._np_entity.current_price / min_average
+        self.low_cost_state.cost_at = min_average
+        self.low_cost_state.now_cost_rate = self._np_entity.current_price / min_average
 
         if self._low_cost_binary_sensor_entity:
             self._low_cost_binary_sensor_entity.update_callback()
