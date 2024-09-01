@@ -1,51 +1,45 @@
 """Config flow for PoolLab integration."""
+
 from __future__ import annotations
+
 import logging
+from typing import Any
+
 import voluptuous as vol
-from typing import Any, Dict, Optional
 
 from homeassistant import config_entries
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import selector
 
 from .const import (
-    DOMAIN,
-    CONF_NAME,
-    CONF_NP_ENTITY,
-    CONF_TYPE,
-    CONF_TYPE_MOVING,
-    CONF_TYPE_STATIC,
-    CONF_TYPE_LIST,
-    CONF_LOW_COST_ENTITY,
     CONF_ACCEPT_COST_ENTITY,
     CONF_ACCEPT_RATE_ENTITY,
     CONF_DURATION_ENTITY,
     CONF_END_TIME_ENTITY,
+    CONF_LOW_COST_ENTITY,
+    CONF_NAME,
+    CONF_NP_ENTITY,
     CONF_SEARCH_LENGTH_ENTITY,
+    CONF_TYPE,
+    CONF_TYPE_LIST,
+    DOMAIN,
 )
 
-
 _LOGGER = logging.getLogger(__name__)
-
-
-# def optional_value(value: Any):
-#     """Validate Entity ID if not Empty"""
-#     if value is None:
-#         return None
-#     return vol.All(vol.Coerce(int), vol.Range(min=0, max=8))
 
 
 class NordpoolPlannerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Nordpool Planner config flow."""
 
     VERSION = 1
+    data = None
     _reauth_entry: config_entries.ConfigEntry | None = None
 
     async def async_step_user(
-        self, user_input: Optional[Dict[str, Any]] | None = None
+        self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Handle initial user step."""
-        errors: Dict[str, str] = {}
+        errors: dict[str, str] = {}
 
         if user_input is not None:
             self.data = user_input
@@ -57,9 +51,12 @@ class NordpoolPlannerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             self.data[CONF_LOW_COST_ENTITY] = True
 
             await self.async_set_unique_id(
-                self.data[CONF_NAME] + "_" +
-                self.data[CONF_NP_ENTITY] + "_" +
-                self.data[CONF_TYPE])
+                self.data[CONF_NAME]
+                + "_"
+                + self.data[CONF_NP_ENTITY]
+                + "_"
+                + self.data[CONF_TYPE]
+            )
             self._abort_if_unique_id_configured()
 
             return self.async_create_entry(title=self.data[CONF_NAME], data=self.data)
@@ -78,12 +75,8 @@ class NordpoolPlannerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Required(CONF_NP_ENTITY): selector.SelectSelector(
                     selector.SelectSelectorConfig(options=sensor_entities),
                 ),
-                vol.Required(CONF_ACCEPT_COST_ENTITY, default=False):
-                    bool
-                ,
-                vol.Required(CONF_ACCEPT_RATE_ENTITY, default=False):
-                    bool
-                ,
+                vol.Required(CONF_ACCEPT_COST_ENTITY, default=False): bool,
+                vol.Required(CONF_ACCEPT_RATE_ENTITY, default=False): bool,
             }
         )
 

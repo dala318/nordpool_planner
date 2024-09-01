@@ -1,20 +1,19 @@
-from __future__ import annotations
-import logging
-from config.custom_components import nordpool
-from homeassistant.components.binary_sensor import BinarySensorEntity
+"""Main package for planner."""
 
+from __future__ import annotations
+
+import logging
+
+from config.custom_components import nordpool
 from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
 from homeassistant.const import STATE_UNKNOWN, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.event import (
-    async_track_state_change_event,
-)
-from homeassistant.util import dt
+from homeassistant.helpers.event import async_track_state_change_event
+from homeassistant.util import dt as dt_util
 
 from .const import (
-    DOMAIN,
     CONF_ACCEPT_COST_ENTITY,
     CONF_ACCEPT_RATE_ENTITY,
     CONF_DURATION_ENTITY,
@@ -23,6 +22,7 @@ from .const import (
     CONF_NP_ENTITY,
     CONF_SEARCH_LENGTH_ENTITY,
     CONF_TYPE,
+    DOMAIN,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -48,11 +48,9 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         hass.data[DOMAIN] = {}
 
     if config_entry.entry_id not in hass.data[DOMAIN]:
-        hass.data[DOMAIN][config_entry.entry_id] = planner = NordpoolPlanner(
-            hass, config_entry
-        )
-    else:
-        planner = hass.data[DOMAIN][config_entry.entry_id]
+        hass.data[DOMAIN][config_entry.entry_id] = NordpoolPlanner(hass, config_entry)
+    # else:
+    #     planner = hass.data[DOMAIN][config_entry.entry_id]
     # await planner.async_config_entry_first_refresh()
 
     if config_entry is not None:
@@ -72,7 +70,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
 #         hass.data[DOMAIN].pop(entry.entry_id)
 #     return unload_ok
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Unloading a config_flow entry"""
+    """Unloading a config_flow entry."""
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id)
@@ -80,12 +78,14 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
 async def async_reload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> None:
-    """Reload the HACS config entry."""
+    """Reload the config entry."""
     await async_unload_entry(hass, config_entry)
     await async_setup_entry(hass, config_entry)
 
 
 class NordpoolPlanner:
+    """Planner base class."""
+
     def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry) -> None:
         """Initialize my coordinator."""
         self._hass = hass
@@ -122,33 +122,44 @@ class NordpoolPlanner:
         # TODO: Make list?
 
         # Output states
-        self.state = NordpoolPlannerState()
+        self.low_cost_state = NordpoolPlannerState()
 
     @property
     def name(self) -> str:
+        """Name of planner."""
         return self._config.data["name"]
 
     @property
     def _duration(self) -> int:
+        """Get duration parameter."""
         return self.get_number_entity_value(self._duration_number_entity, integer=True)
 
     @property
     def _search_length(self) -> int:
-        return self.get_number_entity_value(self._search_length_number_entity, integer=True)
+        """Get search length parameter."""
+        return self.get_number_entity_value(
+            self._search_length_number_entity, integer=True
+        )
 
     @property
     def _end_time(self) -> int:
+        """Get end time parameter."""
         return self.get_number_entity_value(self._end_time_number_entity, integer=True)
 
     @property
     def _accept_cost(self) -> float:
+        """Get accept cost parameter."""
         return self.get_number_entity_value(self._accept_cost_number_entity)
 
     @property
     def _accept_rate(self) -> float:
+        """Get accept rate parameter."""
         return self.get_number_entity_value(self._accept_rate_number_entity)
 
-    def get_number_entity_value(self, entity_id: str, integer:bool=False) -> float|int|None:
+    def get_number_entity_value(
+        self, entity_id: str, integer: bool = False
+    ) -> float | int | None:
+        """Get value of generic entity parameter."""
         if entity_id:
             try:
                 entity = self._hass.states.get(entity_id)
@@ -158,14 +169,14 @@ class NordpoolPlanner:
                 #     return value
                 if integer:
                     return int(value)
-                return value
+                return value  # noqa: TRY300
             except (TypeError, ValueError):
                 _LOGGER.warning(
                     'Could not convert value "%s" of entity %s to expected format',
                     state,
                     entity_id,
                 )
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 _LOGGER.error(
                     'Unknown error wen reading and converting "%s": %s',
                     entity_id,
@@ -176,6 +187,7 @@ class NordpoolPlanner:
         return None
 
     def register_input_entity_id(self, entity_id, conf_key) -> None:
+        """Register input entity id."""
         # Input numbers
         if conf_key == CONF_DURATION_ENTITY:
             self._duration_number_entity = entity_id
@@ -191,7 +203,7 @@ class NordpoolPlanner:
             _LOGGER.warning(
                 'An entity "%s" was registred for callback but no match for key "%s"',
                 entity_id,
-                conf_key
+                conf_key,
             )
         # TODO: Dont seem to work as expected!
         async_track_state_change_event(
@@ -201,6 +213,7 @@ class NordpoolPlanner:
         )
 
     def register_output_listner_entity(self, entity, conf_key="") -> None:
+        """Register output entity."""
         # Output binary sensors
         if conf_key == CONF_LOW_COST_ENTITY:
             self._low_cost_binary_sensor_entity = entity
@@ -208,65 +221,60 @@ class NordpoolPlanner:
             _LOGGER.warning(
                 'An entity "%s" was registred for update but no match for key "%s"',
                 entity.entity_id,
-                conf_key
+                conf_key,
             )
 
     def get_device_info(self) -> DeviceInfo:
+        """Get device info to group entities."""
         return DeviceInfo(
             identifiers={(DOMAIN, self._config.data[CONF_TYPE])},
             name=self.name,
             manufacturer="Nordpool",
             entry_type=DeviceEntryType.SERVICE,
-            via_device=(nordpool.DOMAIN, self._np_entity.unique_id)
+            via_device=(nordpool.DOMAIN, self._np_entity.unique_id),
         )
 
     def input_changed(self, value):
+        """Input entitiy callback to initiate a planner update."""
         _LOGGER.debug("Sensor change event from callback: %s", value)
         self.update()
 
     async def _async_input_changed(self, event):
+        """Input entity change callback from state change event."""
         new_state = event.data.get("new_state")
         _LOGGER.debug("Sensor change event from HASS: %s", new_state)
         self.update()
 
     def update(self):
+        """Public planner update call function."""
         # if self._config.data[CONF_TYPE] == CONF_TYPE_MOVING:
-        self._update(dt.now().hour, self._search_length)
+        self._update(dt_util.now().hour, self._search_length)
 
     def _update(self, start_hour, search_length: int):
-        _LOGGER.debug(
-            "Updating planner"
-        )
-
-        # # TODO: Remove, only for debugging
-        # d = self._duration
-        # c = self._accept_cost
-        # r = self._accept_rate
-        # l = self._search_length
-        # e = self._end_time
+        """Planner update call function."""
+        _LOGGER.debug("Updating planner")
 
         self._np_entity.update(self._hass)
         if not self._np_entity.valid:
-            _LOGGER.warning(
-                "Aborting update since no valid Nordpool data"
-            )
+            _LOGGER.warning("Aborting update since no valid Nordpool data")
             return
 
         # Evaluate data
-        now = dt.now()
+        now = dt_util.now()
         min_average = self._np_entity.current_price
         min_start_hour = now.hour
         # Only search if current is above acceptable rates and in range
         if (
             now.hour >= start_hour
             and not (self._accept_cost is not None and min_average <= self._accept_cost)
-            and not (self._accept_rate is not None and (min_average / self._np_entity.average) <= self._accept_rate)
+            and not (
+                self._accept_rate is not None
+                and (min_average / self._np_entity.average) <= self._accept_rate
+            )
         ):
             duration = self._duration
             if duration is None:
-                _LOGGER.warning(
-                    "Aborting update since no valid Duration"
-                )
+                _LOGGER.warning("Aborting update since no valid Duration")
                 return
 
             for i in range(
@@ -286,8 +294,10 @@ class NordpoolPlanner:
                     min_start_hour = i
                     _LOGGER.debug("New min value at %s", i)
                 if (
-                    (self._accept_cost is not None and min_average <= self._accept_cost) or
-                    (self._accept_rate is not None and (min_average / self._np_entity.average) <= self._accept_rate)
+                    self._accept_cost is not None and min_average <= self._accept_cost
+                ) or (
+                    self._accept_rate is not None
+                    and (min_average / self._np_entity.average) <= self._accept_rate
                 ):
                     min_average = average
                     min_start_hour = i
@@ -302,12 +312,10 @@ class NordpoolPlanner:
             # self._attr_is_on = False
             self.state.is_on = False
 
-        start = dt.parse_datetime(
-            "%s-%s-%s %s:%s" % (now.year, now.month, now.day, 0, 0)
-        )
+        start = dt_util.parse_datetime(f"{now.year}-{now.month}-{now.day} {0}:{0}")
         # Check if next day
         if min_start_hour >= 24:
-            start += dt.parse_duration("1 day")
+            start += dt_util.parse_duration("1 day")
             min_start_hour -= 24
         self.state.starts_at = "%04d-%02d-%02d %02d:%02d" % (
             start.year,
@@ -324,21 +332,27 @@ class NordpoolPlanner:
 
 
 class NordpoolEntity:
+    """Represenatation for Nordpool state."""
+
     def __init__(self, unique_id: str) -> None:
+        """Initialize state tracker."""
         self._unique_id = unique_id
         self._np = None
 
     @property
     def unique_id(self) -> str:
+        """Get the unique id."""
         return self._unique_id
 
     @property
     def valid(self) -> bool:
+        """Get if data is valid."""
         # TODO: Add more checks, make function of those in update()
         return self._np is not None
 
     @property
     def prices(self):
+        """Get the prices."""
         np_prices = self._np.attributes["today"]
         if self._np.attributes["tomorrow_valid"]:
             np_prices += self._np.attributes["tomorrow"]
@@ -346,26 +360,26 @@ class NordpoolEntity:
 
     @property
     def average(self):
+        """Get the average price."""
         return self._np.attributes["average"]
 
     @property
     def current_price(self):
+        """Get the curent price."""
         return self._np.attributes["current_price"]
 
     def update(self, hass: HomeAssistant) -> None:
+        """Update price in storage."""
         np = hass.states.get(self._unique_id)
         if np is None:
-            _LOGGER.warning(
-                "Got empty data from Norpool entity %s ", self._unique_id
-            )
-        elif "today" not in np.attributes.keys():
+            _LOGGER.warning("Got empty data from Norpool entity %s ", self._unique_id)
+        elif "today" not in np.attributes:
             _LOGGER.warning(
                 "No values for today in Norpool entity %s ", self._unique_id
             )
         else:
             _LOGGER.debug(
-                "Nordpool sensor %s was updated sucsessfully",
-                self._unique_id
+                "Nordpool sensor %s was updated sucsessfully", self._unique_id
             )
             if self._np is None:
                 pass
@@ -378,7 +392,10 @@ class NordpoolEntity:
 
 
 class NordpoolPlannerState:
+    """State attribute representation."""
+
     def __init__(self) -> None:
+        """Initiate states."""
         self.is_on = STATE_UNKNOWN
         self.starts_at = STATE_UNKNOWN
         self.cost_at = STATE_UNKNOWN
@@ -386,10 +403,13 @@ class NordpoolPlannerState:
 
 
 class NordpoolPlannerEntity(Entity):
+    """Base class for nordpool planner entities."""
+
     def __init__(
         self,
         planner: NordpoolPlanner,
     ) -> None:
+        """Initialize entity."""
         # Input configs
         self._planner = planner
         self._attr_device_info = planner.get_device_info()

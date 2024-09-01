@@ -1,3 +1,5 @@
+"""Common constants for integration."""
+
 DOMAIN = "nordpool_planner"
 
 CONF_NAME = "name"

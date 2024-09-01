@@ -1,15 +1,17 @@
+"""Number definitions."""
+
 from __future__ import annotations
 
 import logging
-from homeassistant.components.number import NumberEntityDescription, RestoreNumber
-from homeassistant.components.number.const import NumberDeviceClass
+
+from homeassistant.components.number import (
+    NumberDeviceClass,
+    NumberEntityDescription,
+    RestoreNumber,
+)
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN, UnitOfTime
 from homeassistant.core import HomeAssistant
-
-from .const import (
-    DOMAIN,
-)
 
 from . import (
     CONF_ACCEPT_COST_ENTITY,
@@ -20,6 +22,7 @@ from . import (
     NordpoolPlanner,
     NordpoolPlannerEntity,
 )
+from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -66,49 +69,67 @@ END_TIME_ENTITY_DESCRIPTION = NumberEntityDescription(
 async def async_setup_entry(
     hass: HomeAssistant, config_entry: ConfigEntry, async_add_entities
 ):
-    """Setup sensor platform for the ui"""
+    """Create configuration number entities for platform."""
+
     planner: NordpoolPlanner = hass.data[DOMAIN][config_entry.entry_id]
     entities = []
 
-    if (CONF_DURATION_ENTITY in config_entry.data.keys() and
-        config_entry.data[CONF_DURATION_ENTITY]
-    ):
-        entities.append(NordpoolPlannerNumber(
-            planner, callback=planner.input_changed, start_val=3,
-            entity_description=DURATION_ENTITY_DESCRIPTION))
+    if config_entry.data.get(CONF_DURATION_ENTITY):
+        entities.append(
+            NordpoolPlannerNumber(
+                planner,
+                callback=planner.input_changed,
+                start_val=3,
+                entity_description=DURATION_ENTITY_DESCRIPTION,
+            )
+        )
 
-    if (CONF_ACCEPT_COST_ENTITY in config_entry.data.keys() and
-        config_entry.data[CONF_ACCEPT_COST_ENTITY]
-    ):
-        entities.append(NordpoolPlannerNumber(
-            planner, callback=planner.input_changed, start_val=0.0,
-            entity_description=ACCEPT_COST_ENTITY_DESCRIPTION))
+    if config_entry.data.get(CONF_ACCEPT_COST_ENTITY):
+        entities.append(
+            NordpoolPlannerNumber(
+                planner,
+                callback=planner.input_changed,
+                start_val=0.0,
+                entity_description=ACCEPT_COST_ENTITY_DESCRIPTION,
+            )
+        )
 
-    if (CONF_ACCEPT_RATE_ENTITY in config_entry.data.keys() and
-        config_entry.data[CONF_ACCEPT_RATE_ENTITY]
-    ):
-        entities.append(NordpoolPlannerNumber(
-            planner, callback=planner.input_changed, start_val=0.1,
-            entity_description=ACCEPT_RATE_ENTITY_DESCRIPTION))
+    if config_entry.data.get(CONF_ACCEPT_RATE_ENTITY):
+        entities.append(
+            NordpoolPlannerNumber(
+                planner,
+                callback=planner.input_changed,
+                start_val=0.1,
+                entity_description=ACCEPT_RATE_ENTITY_DESCRIPTION,
+            )
+        )
 
-    if (CONF_SEARCH_LENGTH_ENTITY in config_entry.data.keys() and
-        config_entry.data[CONF_SEARCH_LENGTH_ENTITY]
-    ):
-        entities.append(NordpoolPlannerNumber(
-            planner, callback=planner.input_changed, start_val=10,
-            entity_description=SEARCH_LENGTH_ENTITY_DESCRIPTION))
+    if config_entry.data.get(CONF_SEARCH_LENGTH_ENTITY):
+        entities.append(
+            NordpoolPlannerNumber(
+                planner,
+                callback=planner.input_changed,
+                start_val=10,
+                entity_description=SEARCH_LENGTH_ENTITY_DESCRIPTION,
+            )
+        )
 
-    if (CONF_END_TIME_ENTITY in config_entry.data.keys() and
-        config_entry.data[CONF_END_TIME_ENTITY]
-    ):
-        entities.append(NordpoolPlannerNumber(
-            planner, callback=planner.input_changed, start_val=7,
-            entity_description=END_TIME_ENTITY_DESCRIPTION))
+    if config_entry.data.get(CONF_END_TIME_ENTITY):
+        entities.append(
+            NordpoolPlannerNumber(
+                planner,
+                callback=planner.input_changed,
+                start_val=7,
+                entity_description=END_TIME_ENTITY_DESCRIPTION,
+            )
+        )
 
     async_add_entities(entities)
     return True
 
+
 class NordpoolPlannerNumber(NordpoolPlannerEntity, RestoreNumber):
+    """Number config entity."""
 
     def __init__(
         self,
@@ -117,11 +138,19 @@ class NordpoolPlannerNumber(NordpoolPlannerEntity, RestoreNumber):
         start_val,
         entity_description: NumberEntityDescription,
     ) -> None:
+        """Initialize the entity."""
         super().__init__(planner)
         self.entity_description = entity_description
         self._callback = callback
-        self._attr_name = self._planner.name  + " " + entity_description.key.replace("_", " ")
-        self._attr_unique_id = ("nordpool_planner_" + self._attr_name).lower().replace(".", "").replace(" ", "_")
+        self._attr_name = (
+            self._planner.name + " " + entity_description.key.replace("_", " ")
+        )
+        self._attr_unique_id = (
+            ("nordpool_planner_" + self._attr_name)
+            .lower()
+            .replace(".", "")
+            .replace(" ", "_")
+        )
         self._attr_native_value = start_val
 
     # @property
@@ -130,7 +159,7 @@ class NordpoolPlannerNumber(NordpoolPlannerEntity, RestoreNumber):
     #     return self._price_type
 
     # @property
-    # def unit_of_measurement(self) -> str:  # FIXME
+    # def unit_of_measurement(self) -> str:
     #     """Return the unit of measurement this sensor expresses itself in."""
     #     _currency = self._currency
     #     if self._use_cents is True:
@@ -146,7 +175,9 @@ class NordpoolPlannerNumber(NordpoolPlannerEntity, RestoreNumber):
         ):
             if last_state.state not in (STATE_UNKNOWN, STATE_UNAVAILABLE):
                 self._attr_native_value = last_number_data.native_value
-        self._planner.register_input_entity_id(self.entity_id, self.entity_description.key)
+        self._planner.register_input_entity_id(
+            self.entity_id, self.entity_description.key
+        )
 
     async def async_set_native_value(self, value: float) -> None:
         """Update the current value."""
