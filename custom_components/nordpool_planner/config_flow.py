@@ -22,6 +22,8 @@ from .const import (
     CONF_SEARCH_LENGTH_ENTITY,
     CONF_TYPE,
     CONF_TYPE_LIST,
+    CONF_TYPE_MOVING,
+    CONF_TYPE_STATIC,
     DOMAIN,
 )
 
@@ -46,9 +48,10 @@ class NordpoolPlannerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             # Add those that are not optional
             self.data[CONF_LOW_COST_ENTITY] = True
             self.data[CONF_DURATION_ENTITY] = True
-            self.data[CONF_SEARCH_LENGTH_ENTITY] = True
-            self.data[CONF_END_TIME_ENTITY] = True
-            self.data[CONF_LOW_COST_ENTITY] = True
+            if self.data[CONF_TYPE] == CONF_TYPE_MOVING:
+                self.data[CONF_SEARCH_LENGTH_ENTITY] = True
+            elif self.data[CONF_TYPE] == CONF_TYPE_STATIC:
+                self.data[CONF_END_TIME_ENTITY] = True
 
             await self.async_set_unique_id(
                 self.data[CONF_NAME]
@@ -59,6 +62,11 @@ class NordpoolPlannerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             )
             self._abort_if_unique_id_configured()
 
+            _LOGGER.debug(
+                'Creating entry "%s" with data "%s"',
+                self.unique_id,
+                self.data,
+            )
             return self.async_create_entry(title=self.data[CONF_NAME], data=self.data)
 
         sensor_entities = self.hass.states.async_entity_ids(domain_filter="sensor")
@@ -97,13 +105,3 @@ class NordpoolPlannerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     # ) -> FlowResult:
     #     """Import nordpool planner config from configuration.yaml."""
     #     return await self.async_step_user(import_data)
-
-    # async def async_step_reconfigure(
-    #     self, user_input: Optional[Dict[str, Any]] | None = None
-    # ) -> FlowResult:
-    #     if user_input is not None:
-    #         pass  # TODO: process user input
-    #     return self.async_show_form(
-    #         step_id="reconfigure",
-    #         data_schema=vol.Schema({vol.Required("input_parameter"): str}),
-    #     )
