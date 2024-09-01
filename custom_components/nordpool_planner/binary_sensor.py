@@ -55,7 +55,9 @@ class NordpoolPlannerBinarySensor(NordpoolPlannerEntity, BinarySensorEntity):
         super().__init__(planner)
         self.entity_description = entity_description
         self._attr_name = (
-            self._planner.name + " " + entity_description.key.replace("_", " ")
+            self._planner.name
+            + " "
+            + entity_description.key.replace("_entity", "").replace("_", " ")
         )
         self._attr_unique_id = (
             ("nordpool_planner_" + self._attr_name)
