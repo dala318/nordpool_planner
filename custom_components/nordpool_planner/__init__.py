@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime as dt
 import logging
 
 from config.custom_components import nordpool
@@ -165,8 +166,6 @@ class NordpoolPlanner:
                 entity = self._hass.states.get(entity_id)
                 state = entity.state
                 value = float(state)
-                # if value is not None:
-                #     return value
                 if integer:
                     return int(value)
                 return value  # noqa: TRY300
@@ -248,11 +247,36 @@ class NordpoolPlanner:
     def update(self):
         """Public planner update call function."""
         # if self._config.data[CONF_TYPE] == CONF_TYPE_MOVING:
-        self._update(dt_util.now().hour, self._search_length)
+        self._update_legacy(dt_util.now().hour, self._search_length)
+        self._update()
 
-    def _update(self, start_hour, search_length: int):
+    def _update(self) -> None:
         """Planner update call function."""
         _LOGGER.debug("Updating planner")
+
+        # Update inputs
+        self._np_entity.update(self._hass)
+        if not self._np_entity.valid:
+            _LOGGER.warning("Aborting update since no valid Nordpool data")
+            return
+
+        if not self._duration:
+            _LOGGER.warning("Aborting update since no valid Duration")
+            return
+
+        # initialize local variables
+        now = dt_util.now()
+        min_start_hour = now.hour
+        min_average = self._np_entity.current_price
+
+        # np_raw = self._np_entity.prices_raw
+        duration = dt.timedelta(hours=self._duration)
+        np_range = self._np_entity.get_prices_range(now, now + duration)
+        pass
+
+    def _update_legacy(self, start_hour, search_length: int) -> None:
+        """Planner update call function."""
+        _LOGGER.debug("Updating legacy planner")
 
         self._np_entity.update(self._hass)
         if not self._np_entity.valid:
@@ -359,6 +383,13 @@ class NordpoolEntity:
         return np_prices
 
     @property
+    def _prices_raw(self):
+        np_prices = self._np.attributes["raw_today"]
+        if self._np.attributes["tomorrow_valid"]:
+            np_prices += self._np.attributes["raw_tomorrow"]
+        return np_prices
+
+    @property
     def average(self):
         """Get the average price."""
         return self._np.attributes["average"]
@@ -389,6 +420,19 @@ class NordpoolEntity:
         if self._np is None:
             # TODO: Set UNAVAILABLE?
             return
+
+    def get_prices_range(self, start: dt.datetime, end: dt.datetime):
+        """Get a range of prices from NP given the start and end datatimes."""
+        started = False
+        selected = []
+        for p in self._prices_raw:
+            if p["start"] < start:
+                started = True
+            if p["start"] > end:  # dt.timedelta(hours=1)
+                break
+            if started:
+                selected.append(p)
+        return selected
 
 
 class NordpoolPlannerState:
