@@ -23,6 +23,8 @@ from .const import (
     CONF_NP_ENTITY,
     CONF_SEARCH_LENGTH_ENTITY,
     CONF_TYPE,
+    CONF_TYPE_MOVING,
+    CONF_TYPE_STATIC,
     DOMAIN,
 )
 
@@ -136,11 +138,21 @@ class NordpoolPlanner:
         return self.get_number_entity_value(self._duration_number_entity, integer=True)
 
     @property
+    def _is_moving(self) -> bool:
+        """Get if planner is of type Moving."""
+        return self._config.data[CONF_TYPE] == CONF_TYPE_MOVING
+
+    @property
     def _search_length(self) -> int:
         """Get search length parameter."""
         return self.get_number_entity_value(
             self._search_length_number_entity, integer=True
         )
+
+    @property
+    def _is_static(self) -> bool:
+        """Get if planner is of type Moving."""
+        return self._config.data[CONF_TYPE] == CONF_TYPE_STATIC
 
     @property
     def _end_time(self) -> int:
@@ -264,14 +276,50 @@ class NordpoolPlanner:
             _LOGGER.warning("Aborting update since no valid Duration")
             return
 
+        if self._is_moving and not self._search_length:
+            _LOGGER.warning("Aborting update since no valid Search length")
+            return
+
+        if self._is_static and not self._end_time:
+            _LOGGER.warning("Aborting update since no valid end time")
+            return
+
         # initialize local variables
         now = dt_util.now()
-        min_start_hour = now.hour
-        min_average = self._np_entity.current_price
+        duration = dt.timedelta(hours=self._duration - 1)
 
-        # np_raw = self._np_entity.prices_raw
-        duration = dt.timedelta(hours=self._duration)
-        np_range = self._np_entity.get_prices_range(now, now + duration)
+        if self._is_moving:
+            end_time = now + dt.timedelta(hours=self._search_length)
+        elif self._is_static:
+            end_time = self._end_time
+        else:
+            _LOGGER.warning("Aborting update since unknown planner type")
+            return
+
+        prices_groups = []
+        offset = 0
+        while True:
+            timedelta = dt.timedelta(hours=offset)
+            first_time = now + timedelta
+            last_time = first_time + duration
+            if last_time > end_time:
+                break
+            prices_groups.append(
+                self._np_entity.get_prices_group(first_time, last_time)
+            )
+            offset += 1
+
+        for p in prices_groups:
+            if self._accept_cost and p.average < self._accept_cost:
+                _LOGGER.debug("Accept cost fulfilled")
+                # TODO: Set low_cost
+            if (
+                self._accept_rate
+                and p.average / self._np_entity.average_attr < self._accept_rate
+            ):
+                _LOGGER.debug("Accept rate fulfilled")
+                # TODO: Set low_cost
+
         pass
 
     def _update_legacy(self, start_hour, search_length: int) -> None:
@@ -285,7 +333,7 @@ class NordpoolPlanner:
 
         # Evaluate data
         now = dt_util.now()
-        min_average = self._np_entity.current_price
+        min_average = self._np_entity.current_price_attr
         min_start_hour = now.hour
         # Only search if current is above acceptable rates and in range
         if (
@@ -293,7 +341,7 @@ class NordpoolPlanner:
             and not (self._accept_cost is not None and min_average <= self._accept_cost)
             and not (
                 self._accept_rate is not None
-                and (min_average / self._np_entity.average) <= self._accept_rate
+                and (min_average / self._np_entity.average_attr) <= self._accept_rate
             )
         ):
             duration = self._duration
@@ -321,7 +369,8 @@ class NordpoolPlanner:
                     self._accept_cost is not None and min_average <= self._accept_cost
                 ) or (
                     self._accept_rate is not None
-                    and (min_average / self._np_entity.average) <= self._accept_rate
+                    and (min_average / self._np_entity.average_attr)
+                    <= self._accept_rate
                 ):
                     min_average = average
                     min_start_hour = i
@@ -349,7 +398,9 @@ class NordpoolPlanner:
             0,
         )
         self.low_cost_state.cost_at = min_average
-        self.low_cost_state.now_cost_rate = self._np_entity.current_price / min_average
+        self.low_cost_state.now_cost_rate = (
+            self._np_entity.current_price_attr / min_average
+        )
 
         if self._low_cost_binary_sensor_entity:
             self._low_cost_binary_sensor_entity.update_callback()
@@ -390,13 +441,13 @@ class NordpoolEntity:
         return np_prices
 
     @property
-    def average(self):
-        """Get the average price."""
+    def average_attr(self):
+        """Get the average price attribute."""
         return self._np.attributes["average"]
 
     @property
-    def current_price(self):
-        """Get the curent price."""
+    def current_price_attr(self):
+        """Get the curent price attribute."""
         return self._np.attributes["current_price"]
 
     def update(self, hass: HomeAssistant) -> None:
@@ -421,18 +472,37 @@ class NordpoolEntity:
             # TODO: Set UNAVAILABLE?
             return
 
-    def get_prices_range(self, start: dt.datetime, end: dt.datetime):
-        """Get a range of prices from NP given the start and end datatimes."""
+    def get_prices_group(
+        self, start: dt.datetime, end: dt.datetime
+    ) -> NordpoolPricesGroup:
+        """Get a range of prices from NP given the start and end datatimes.
+
+        Ex. If start is 7:05 and end 10:05, a list of 4 prices will be returned,
+        7, 8, 9 & 10.
+        """
         started = False
         selected = []
         for p in self._prices_raw:
-            if p["start"] < start:
+            if p["start"] > start - dt.timedelta(hours=1):
                 started = True
-            if p["start"] > end:  # dt.timedelta(hours=1)
+            if p["start"] > end:
                 break
             if started:
                 selected.append(p)
-        return selected
+        return NordpoolPricesGroup(selected)
+
+
+class NordpoolPricesGroup:
+    """A slice if Nordpool prices with helper functions."""
+
+    def __init__(self, prices) -> None:
+        """Initialize price group."""
+        self._prices = prices
+
+    @property
+    def average(self) -> float:
+        """The average price of the price group."""
+        return sum([p["value"] for p in self._prices]) / len(self._prices)
 
 
 class NordpoolPlannerState:
