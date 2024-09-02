@@ -80,6 +80,9 @@ class NordpoolPlannerBinarySensor(NordpoolPlannerEntity, BinarySensorEntity):
     def extra_state_attributes(self):
         """Extra state attributes."""
         return {
+            # "starts_at": self._planner.low_cost_state.starts_at.strftime(
+            #     "%Y-%m-%d %H:%M"
+            # ),
             "starts_at": self._planner.low_cost_state.starts_at,
             "cost_at": self._planner.low_cost_state.cost_at,
             "now_cost_rate": self._planner.low_cost_state.now_cost_rate,
