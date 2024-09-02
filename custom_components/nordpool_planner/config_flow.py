@@ -70,8 +70,12 @@ class NordpoolPlannerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             return self.async_create_entry(title=self.data[CONF_NAME], data=self.data)
 
         sensor_entities = self.hass.states.async_entity_ids(domain_filter="sensor")
-        sensor_entities = [s for s in sensor_entities if "nordpool" in s]
-        if len(sensor_entities) == 0:
+        selected_entities = [s for s in sensor_entities if "nordpool" in s]
+        # selected_entities += [
+        #     s for s in sensor_entities if "current_electricity_market_price" in s
+        # ]
+
+        if len(selected_entities) == 0:
             errors["base"] = "No Nordpool entity found"
 
         schema = vol.Schema(
@@ -81,7 +85,7 @@ class NordpoolPlannerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     selector.SelectSelectorConfig(options=CONF_TYPE_LIST),
                 ),
                 vol.Required(CONF_NP_ENTITY): selector.SelectSelector(
-                    selector.SelectSelectorConfig(options=sensor_entities),
+                    selector.SelectSelectorConfig(options=selected_entities),
                 ),
                 vol.Required(CONF_ACCEPT_COST_ENTITY, default=False): bool,
                 vol.Required(CONF_ACCEPT_RATE_ENTITY, default=False): bool,
@@ -90,7 +94,7 @@ class NordpoolPlannerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         placeholders = {
             CONF_TYPE: CONF_TYPE_LIST,
-            CONF_NP_ENTITY: sensor_entities,
+            CONF_NP_ENTITY: selected_entities,
         }
 
         return self.async_show_form(
