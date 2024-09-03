@@ -291,24 +291,43 @@ class NordpoolPlanner:
         if self._is_moving:
             end_time = now + dt.timedelta(hours=self._search_length)
         elif self._is_static:
-            end_time = self._end_time
+            end_time = now.replace(minute=0, second=0, microsecond=0)
+            if self._end_time < now.hour:
+                end_time += dt.timedelta(days=1)
+
         else:
             _LOGGER.warning("Aborting update since unknown planner type")
             return
 
-        prices_groups = []
+        prices_groups: list[NordpoolPricesGroup] = []
         offset = 0
         while True:
-            timedelta = dt.timedelta(hours=offset)
-            first_time = now + timedelta
+            start_offset = dt.timedelta(hours=offset)
+            first_time = now + start_offset
             last_time = first_time + duration
-            if last_time > end_time:
+            if offset != 0 and last_time > end_time:
                 break
-            prices_groups.append(
-                self._np_entity.get_prices_group(first_time, last_time)
-            )
             offset += 1
+            prices_group = self._np_entity.get_prices_group(first_time, last_time)
+            if not prices_group.valid:
+                continue
+                # TODO: Should not end up here, why?
+            prices_groups.append(prices_group)
 
+        if len(prices_groups) == 0:
+            _LOGGER.warning(
+                "Aborting update since no prices fetched in range %s to %s with duration %s",
+                now,
+                end_time,
+                duration,
+            )
+
+        _LOGGER.debug(
+            "Processing %s prices_groups found in range %s to %s",
+            len(prices_groups),
+            now,
+            end_time,
+        )
         lowest_cost_group: NordpoolPricesGroup = prices_groups[0]
         for p in prices_groups:
             if self._accept_cost and p.average < self._accept_cost:
@@ -340,7 +359,6 @@ class NordpoolPlanner:
     ) -> None:
         """Set the state to output variable."""
         self.low_cost_state.is_on = prices_group.start_time < now
-        # self.low_cost_state.starts_at = prices_group.start_time
         self.low_cost_state.starts_at = prices_group.start_time.strftime(
             "%Y-%m-%d %H:%M"
         )
@@ -355,20 +373,12 @@ class NordpoolPlanner:
         self.low_cost_state.now_cost_rate = (
             self._np_entity.current_price_attr / prices_group.average
         )
+        _LOGGER.debug("Wrote lowest cost state: %s", self.low_cost_state)
 
     # def _update_legacy(self, start_hour, search_length: int) -> None:
     #     """Planner update call function."""
     #     _LOGGER.debug("Updating legacy planner")
 
-    #     self._np_entity.update(self._hass)
-    #     if not self._np_entity.valid:
-    #         _LOGGER.warning("Aborting update since no valid Nordpool data")
-    #         return
-
-    #     # Evaluate data
-    #     now = dt_util.now()
-    #     min_average = self._np_entity.current_price_attr
-    #     min_start_hour = now.hour
     #     # Only search if current is above acceptable rates and in range
     #     if (
     #         now.hour >= start_hour
@@ -533,14 +543,34 @@ class NordpoolPricesGroup:
         """Initialize price group."""
         self._prices = prices
 
+    def __str__(self) -> str:
+        """Get string representation of class."""
+        return f"start_time={self.start_time.strftime("%Y-%m-%d %H:%M")} average={self.average} len(_prices)={len(self._prices)}"
+
+    def __repr__(self) -> str:
+        """Get string representation for debugging."""
+        return type(self).__name__ + f" ({self.__str__()})"
+
+    @property
+    def valid(self) -> bool:
+        """Is the price group valid."""
+        if len(self._prices) == 0:
+            # _LOGGER.debug("None-valid price range group, len=%s", len(self._prices))
+            return False
+        return True
+
     @property
     def average(self) -> float:
         """The average price of the price group."""
+        if not self.valid:
+            return 1
         return sum([p["value"] for p in self._prices]) / len(self._prices)
 
     @property
     def start_time(self) -> dt.datetime:
         """The start time of first price in group."""
+        # if not self.valid:
+        #     return None
         return self._prices[0]["start"]
 
 
@@ -553,6 +583,10 @@ class NordpoolPlannerState:
         self.starts_at = STATE_UNKNOWN
         self.cost_at = STATE_UNKNOWN
         self.now_cost_rate = STATE_UNKNOWN
+
+    def __str__(self) -> str:
+        """Get string representation of class."""
+        return f"is_on={self.is_on} start_at={self.starts_at} cost_at={self.cost_at} now_cost_rate={self.now_cost_rate}"
 
 
 class NordpoolPlannerEntity(Entity):
