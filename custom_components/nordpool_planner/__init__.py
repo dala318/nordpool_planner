@@ -352,7 +352,10 @@ class NordpoolPlanner:
                 highest_cost_group = p
         # self.set_highest_cost_state(lowest_cost_group, now)
         # TODO: Implement this
-        pass
+
+        # Schedule update of output sensors
+        if self._low_cost_binary_sensor_entity:
+            self._low_cost_binary_sensor_entity.update_callback()
 
     def set_lowest_cost_state(
         self, prices_group: NordpoolPricesGroup, now: dt.datetime
