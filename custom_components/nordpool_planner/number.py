@@ -85,6 +85,17 @@ async def async_setup_entry(
         )
 
     if config_entry.data.get(CONF_ACCEPT_COST_ENTITY):
+        # TODO: Either here or in number class get currency of NP and set same in number entity
+
+        # np_entity = hass.states.get(config_entry.data.get(CONF_NP_ENTITY))
+        # currency = ""
+        # try:
+        #     currency = np_entity.attributes["currency"]
+        # except (IndexError, KeyError):
+        #     _LOGGER.warning("Could not extract currency from Nordpool entity")
+
+        # currency = config_entry.options.get("currency")
+
         entities.append(
             NordpoolPlannerNumber(
                 planner,
@@ -141,6 +152,7 @@ class NordpoolPlannerNumber(NordpoolPlannerEntity, RestoreNumber):
         """Initialize the entity."""
         super().__init__(planner)
         self.entity_description = entity_description
+        self._default_value = start_val
         self._callback = callback
         self._attr_name = (
             self._planner.name
@@ -153,7 +165,6 @@ class NordpoolPlannerNumber(NordpoolPlannerEntity, RestoreNumber):
             .replace(".", "")
             .replace(" ", "_")
         )
-        self._default_value = start_val
 
     # @property
     # def unit(self) -> str:

@@ -35,6 +35,7 @@ class NordpoolPlannerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     VERSION = 1
     data = None
+    options = None
     _reauth_entry: config_entries.ConfigEntry | None = None
 
     async def async_step_user(
@@ -53,6 +54,13 @@ class NordpoolPlannerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             elif self.data[CONF_TYPE] == CONF_TYPE_STATIC:
                 self.data[CONF_END_TIME_ENTITY] = True
 
+            self.options = {}
+            np_entity = self.hass.states.get(self.data[CONF_NP_ENTITY])
+            try:
+                self.options["currency"] = np_entity.attributes["currency"]
+            except (IndexError, KeyError):
+                _LOGGER.warning("Could not extract currency from Nordpool entity")
+
             await self.async_set_unique_id(
                 self.data[CONF_NAME]
                 + "_"
@@ -67,7 +75,9 @@ class NordpoolPlannerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 self.unique_id,
                 self.data,
             )
-            return self.async_create_entry(title=self.data[CONF_NAME], data=self.data)
+            return self.async_create_entry(
+                title=self.data[CONF_NAME], data=self.data, options=self.options
+            )
 
         sensor_entities = self.hass.states.async_entity_ids(domain_filter="sensor")
         selected_entities = [s for s in sensor_entities if "nordpool" in s]
