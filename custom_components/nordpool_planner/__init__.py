@@ -7,7 +7,7 @@ import logging
 
 from config.custom_components import nordpool
 from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
-from homeassistant.const import STATE_UNKNOWN, Platform
+from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.entity import Entity
@@ -127,6 +127,7 @@ class NordpoolPlanner:
 
         # Output states
         self.low_cost_state = NordpoolPlannerState()
+        self.high_cost_state = NordpoolPlannerState()
 
     @property
     def name(self) -> str:
@@ -262,7 +263,10 @@ class NordpoolPlanner:
         _LOGGER.debug("Updating planner")
 
         # Update inputs
-        self._np_entity.update(self._hass)
+        if not self._np_entity.update(self._hass):
+            self.set_unavailable()
+            return
+
         if not self._np_entity.valid:
             _LOGGER.warning("Aborting update since no valid Nordpool data")
             return
@@ -323,6 +327,7 @@ class NordpoolPlanner:
             now,
             end_time,
         )
+
         lowest_cost_group: NordpoolPricesGroup = prices_groups[0]
         for p in prices_groups:
             if self._accept_cost and p.average < self._accept_cost:
@@ -339,22 +344,19 @@ class NordpoolPlanner:
             if p.average < lowest_cost_group.average:
                 lowest_cost_group = p
         else:
-            self.set_lowest_cost_state(lowest_cost_group, now)
+            self.set_lowest_cost_state(lowest_cost_group)
 
         highest_cost_group: NordpoolPricesGroup = prices_groups[0]
         for p in prices_groups:
             if p.average > highest_cost_group.average:
                 highest_cost_group = p
-        # self.set_highest_cost_state(lowest_cost_group, now)
-        # TODO: Implement this
+        self.set_highest_cost_state(highest_cost_group)
 
         # Schedule update of output sensors
         if self._low_cost_binary_sensor_entity:
             self._low_cost_binary_sensor_entity.update_callback()
 
-    def set_lowest_cost_state(
-        self, prices_group: NordpoolPricesGroup, now: dt.datetime
-    ) -> None:
+    def set_lowest_cost_state(self, prices_group: NordpoolPricesGroup) -> None:
         """Set the state to output variable."""
         self.low_cost_state.starts_at = prices_group.start_time
         self.low_cost_state.cost_at = prices_group.average
@@ -362,6 +364,25 @@ class NordpoolPlanner:
             self._np_entity.current_price_attr / prices_group.average
         )
         _LOGGER.debug("Wrote lowest cost state: %s", self.low_cost_state)
+
+    def set_highest_cost_state(self, prices_group: NordpoolPricesGroup) -> None:
+        """Set the state to output variable."""
+        self.high_cost_state.starts_at = prices_group.start_time
+        self.high_cost_state.cost_at = prices_group.average
+        self.high_cost_state.now_cost_rate = (
+            self._np_entity.current_price_attr / prices_group.average
+        )
+        _LOGGER.debug("Wrote highest cost state: %s", self.high_cost_state)
+
+    def set_unavailable(self) -> None:
+        """Set output state to unavailable."""
+        self.low_cost_state.starts_at = STATE_UNAVAILABLE
+        self.low_cost_state.cost_at = STATE_UNAVAILABLE
+        self.low_cost_state.now_cost_rate = STATE_UNAVAILABLE
+        self.high_cost_state.starts_at = STATE_UNAVAILABLE
+        self.high_cost_state.cost_at = STATE_UNAVAILABLE
+        self.high_cost_state.now_cost_rate = STATE_UNAVAILABLE
+        _LOGGER.debug("Setting output states to unavailable")
 
 
 class NordpoolEntity:
@@ -408,7 +429,7 @@ class NordpoolEntity:
         """Get the curent price attribute."""
         return self._np.attributes["current_price"]
 
-    def update(self, hass: HomeAssistant) -> None:
+    def update(self, hass: HomeAssistant) -> bool:
         """Update price in storage."""
         np = hass.states.get(self._unique_id)
         if np is None:
@@ -426,8 +447,8 @@ class NordpoolEntity:
             self._np = np
 
         if self._np is None:
-            # TODO: Set UNAVAILABLE?
-            return
+            return False
+        return True
 
     def get_prices_group(
         self, start: dt.datetime, end: dt.datetime

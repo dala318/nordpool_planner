@@ -14,14 +14,14 @@ from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
 
 from . import NordpoolPlanner, NordpoolPlannerEntity
-from .const import CONF_LOW_COST_ENTITY, DOMAIN
+from .const import CONF_HIGH_COST_ENTITY, CONF_LOW_COST_ENTITY, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
-LOW_COST_ENTITY_DESCRIPTION = BinarySensorEntityDescription(
-    key=CONF_LOW_COST_ENTITY,
-    # device_class=BinarySensorDeviceClass.???,
-)
+# LOW_COST_ENTITY_DESCRIPTION = BinarySensorEntityDescription(
+#     key=CONF_LOW_COST_ENTITY,
+#     # device_class=BinarySensorDeviceClass.???,
+# )
 
 
 async def async_setup_entry(
@@ -35,7 +35,22 @@ async def async_setup_entry(
     if config_entry.data.get(CONF_LOW_COST_ENTITY):
         entities.append(
             NordpoolPlannerBinarySensor(
-                planner, entity_description=LOW_COST_ENTITY_DESCRIPTION
+                planner,
+                entity_description=BinarySensorEntityDescription(
+                    key=CONF_LOW_COST_ENTITY,
+                    # device_class=BinarySensorDeviceClass.???,
+                ),
+            )
+        )
+
+    if config_entry.data.get(CONF_HIGH_COST_ENTITY):
+        entities.append(
+            NordpoolPlannerBinarySensor(
+                planner,
+                entity_description=BinarySensorEntityDescription(
+                    key=CONF_HIGH_COST_ENTITY,
+                    # device_class=BinarySensorDeviceClass.???,
+                ),
             )
         )
 

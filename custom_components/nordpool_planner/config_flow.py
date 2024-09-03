@@ -17,6 +17,7 @@ from .const import (
     CONF_CURENCY,
     CONF_DURATION_ENTITY,
     CONF_END_TIME_ENTITY,
+    CONF_HIGH_COST_ENTITY,
     CONF_LOW_COST_ENTITY,
     CONF_NAME,
     CONF_NP_ENTITY,
@@ -82,6 +83,7 @@ class NordpoolPlannerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         sensor_entities = self.hass.states.async_entity_ids(domain_filter="sensor")
         selected_entities = [s for s in sensor_entities if "nordpool" in s]
+        # TODO: Enable usage for e-ENTSO prices integration
         # selected_entities += [
         #     s for s in sensor_entities if "current_electricity_market_price" in s
         # ]
@@ -100,6 +102,7 @@ class NordpoolPlannerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 ),
                 vol.Required(CONF_ACCEPT_COST_ENTITY, default=False): bool,
                 vol.Required(CONF_ACCEPT_RATE_ENTITY, default=False): bool,
+                vol.Required(CONF_HIGH_COST_ENTITY, default=False): bool,
             }
         )
 
