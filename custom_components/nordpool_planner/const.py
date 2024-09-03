@@ -19,3 +19,5 @@ CONF_ACCEPT_RATE_ENTITY = "accept_rate_entity"
 CONF_SEARCH_LENGTH_ENTITY = "search_length_entity"
 # CONF_END_TIME = "end_time"
 CONF_END_TIME_ENTITY = "end_time_entity"
+
+CONF_CURENCY = "currency"

@@ -22,7 +22,7 @@ from . import (
     NordpoolPlanner,
     NordpoolPlannerEntity,
 )
-from .const import DOMAIN
+from .const import CONF_CURENCY, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -85,23 +85,23 @@ async def async_setup_entry(
         )
 
     if config_entry.data.get(CONF_ACCEPT_COST_ENTITY):
-        # TODO: Either here or in number class get currency of NP and set same in number entity
-
-        # np_entity = hass.states.get(config_entry.data.get(CONF_NP_ENTITY))
-        # currency = ""
-        # try:
-        #     currency = np_entity.attributes["currency"]
-        # except (IndexError, KeyError):
-        #     _LOGGER.warning("Could not extract currency from Nordpool entity")
-
-        # currency = config_entry.options.get("currency")
-
+        entity_description = ACCEPT_COST_ENTITY_DESCRIPTION
+        # Override if curensy option is set
+        if currency := config_entry.options.get(CONF_CURENCY):
+            entity_description = NumberEntityDescription(
+                key=ACCEPT_COST_ENTITY_DESCRIPTION.key,
+                device_class=ACCEPT_COST_ENTITY_DESCRIPTION.device_class,
+                native_min_value=ACCEPT_COST_ENTITY_DESCRIPTION.native_min_value,
+                native_max_value=ACCEPT_COST_ENTITY_DESCRIPTION.native_max_value,
+                native_step=ACCEPT_COST_ENTITY_DESCRIPTION.step,
+                native_unit_of_measurement=currency,
+            )
         entities.append(
             NordpoolPlannerNumber(
                 planner,
                 callback=planner.input_changed,
                 start_val=0.0,
-                entity_description=ACCEPT_COST_ENTITY_DESCRIPTION,
+                entity_description=entity_description,
             )
         )
 
@@ -165,20 +165,6 @@ class NordpoolPlannerNumber(NordpoolPlannerEntity, RestoreNumber):
             .replace(".", "")
             .replace(" ", "_")
         )
-
-    # @property
-    # def unit(self) -> str:
-    #     """Unit"""
-    #     return self._price_type
-
-    # @property
-    # def unit_of_measurement(self) -> str:
-    #     """Return the unit of measurement this sensor expresses itself in."""
-    #     _currency = self._currency
-    #     if self._use_cents is True:
-    #         # Convert unit of measurement to cents based on chosen currency
-    #         _currency = _CURRENTY_TO_CENTS[_currency]
-    #     return "%s/%s" % (_currency, self._price_type)
 
     async def async_added_to_hass(self) -> None:
         """Load the last known state when added to hass."""

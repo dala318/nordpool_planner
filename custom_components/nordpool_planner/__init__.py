@@ -105,12 +105,13 @@ class NordpoolPlanner:
 
         # Internal states
         self._np_entity = NordpoolEntity(self._config.data[CONF_NP_ENTITY])
+
+        # TODO: Dont seem to work as expected!
         async_track_state_change_event(
             self._hass,
             [self._np_entity.unique_id],
             self._async_input_changed,
         )
-        # TODO: Dont seem to work as expected!
 
         # Configuration entities
         self._duration_number_entity = ""
@@ -257,12 +258,6 @@ class NordpoolPlanner:
         self.update()
 
     def update(self):
-        """Public planner update call function."""
-        # if self._config.data[CONF_TYPE] == CONF_TYPE_MOVING:
-        # self._update_legacy(dt_util.now().hour, self._search_length)
-        self._update()
-
-    def _update(self) -> None:
         """Planner update call function."""
         _LOGGER.debug("Updating planner")
 
@@ -361,96 +356,12 @@ class NordpoolPlanner:
         self, prices_group: NordpoolPricesGroup, now: dt.datetime
     ) -> None:
         """Set the state to output variable."""
-        self.low_cost_state.is_on = prices_group.start_time < now
-        self.low_cost_state.starts_at = prices_group.start_time.strftime(
-            "%Y-%m-%d %H:%M"
-        )
-        # self.low_cost_state.starts_at = "%04d-%02d-%02d %02d:%02d" % (
-        #     lowest_cost_group.start_time.year,
-        #     lowest_cost_group.start_time.month,
-        #     lowest_cost_group.start_time.day,
-        #     lowest_cost_group.start_time.hour,
-        #     0,
-        # )
+        self.low_cost_state.starts_at = prices_group.start_time
         self.low_cost_state.cost_at = prices_group.average
         self.low_cost_state.now_cost_rate = (
             self._np_entity.current_price_attr / prices_group.average
         )
         _LOGGER.debug("Wrote lowest cost state: %s", self.low_cost_state)
-
-    # def _update_legacy(self, start_hour, search_length: int) -> None:
-    #     """Planner update call function."""
-    #     _LOGGER.debug("Updating legacy planner")
-
-    #     # Only search if current is above acceptable rates and in range
-    #     if (
-    #         now.hour >= start_hour
-    #         and not (self._accept_cost is not None and min_average <= self._accept_cost)
-    #         and not (
-    #             self._accept_rate is not None
-    #             and (min_average / self._np_entity.average_attr) <= self._accept_rate
-    #         )
-    #     ):
-    #         duration = self._duration
-    #         if duration is None:
-    #             _LOGGER.warning("Aborting update since no valid Duration")
-    #             return
-
-    #         for i in range(
-    #             start_hour,
-    #             min(now.hour + search_length, len(self._np_entity.prices) - duration),
-    #         ):
-    #             price_range = self._np_entity.prices[i : i + duration]
-    #             # Nordpool sometimes returns null prices, https://github.com/custom-components/nordpool/issues/125
-    #             # If more than 50% is Null in selected range skip.
-    #             if len([x for x in price_range if x is None]) * 2 > len(price_range):
-    #                 _LOGGER.debug("Skipping range at %s as to many empty", i)
-    #                 continue
-    #             price_range = [x for x in price_range if x is not None]
-    #             average = sum(price_range) / duration
-    #             if average < min_average:
-    #                 min_average = average
-    #                 min_start_hour = i
-    #                 _LOGGER.debug("New min value at %s", i)
-    #             if (
-    #                 self._accept_cost is not None and min_average <= self._accept_cost
-    #             ) or (
-    #                 self._accept_rate is not None
-    #                 and (min_average / self._np_entity.average_attr)
-    #                 <= self._accept_rate
-    #             ):
-    #                 min_average = average
-    #                 min_start_hour = i
-    #                 _LOGGER.debug("Found range under accept level at %s", i)
-    #                 break
-
-    #     # Write result to entity
-    #     if now.hour >= min_start_hour:
-    #         # self._attr_is_on = True
-    #         self.low_cost_state.is_on = True
-    #     else:
-    #         # self._attr_is_on = False
-    #         self.low_cost_state.is_on = False
-
-    #     start = dt_util.parse_datetime(f"{now.year}-{now.month}-{now.day} {0}:{0}")
-    #     # Check if next day
-    #     if min_start_hour >= 24:
-    #         start += dt_util.parse_duration("1 day")
-    #         min_start_hour -= 24
-    #     self.low_cost_state.starts_at = "%04d-%02d-%02d %02d:%02d" % (
-    #         start.year,
-    #         start.month,
-    #         start.day,
-    #         min_start_hour,
-    #         0,
-    #     )
-    #     self.low_cost_state.cost_at = min_average
-    #     self.low_cost_state.now_cost_rate = (
-    #         self._np_entity.current_price_attr / min_average
-    #     )
-
-    #     if self._low_cost_binary_sensor_entity:
-    #         self._low_cost_binary_sensor_entity.update_callback()
 
 
 class NordpoolEntity:
@@ -512,7 +423,6 @@ class NordpoolEntity:
             )
             if self._np is None:
                 pass
-                # TODO: Set unit_of_measuremetn of applicable number entities
             self._np = np
 
         if self._np is None:
@@ -582,14 +492,13 @@ class NordpoolPlannerState:
 
     def __init__(self) -> None:
         """Initiate states."""
-        self.is_on = STATE_UNKNOWN
         self.starts_at = STATE_UNKNOWN
         self.cost_at = STATE_UNKNOWN
         self.now_cost_rate = STATE_UNKNOWN
 
     def __str__(self) -> str:
         """Get string representation of class."""
-        return f"is_on={self.is_on} start_at={self.starts_at} cost_at={self.cost_at} now_cost_rate={self.now_cost_rate}"
+        return f"start_at={self.starts_at} cost_at={self.cost_at:.2} now_cost_rate={self.now_cost_rate:.2}"
 
 
 class NordpoolPlannerEntity(Entity):

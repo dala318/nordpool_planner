@@ -14,6 +14,7 @@ from homeassistant.helpers import selector
 from .const import (
     CONF_ACCEPT_COST_ENTITY,
     CONF_ACCEPT_RATE_ENTITY,
+    CONF_CURENCY,
     CONF_DURATION_ENTITY,
     CONF_END_TIME_ENTITY,
     CONF_LOW_COST_ENTITY,
@@ -57,7 +58,7 @@ class NordpoolPlannerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             self.options = {}
             np_entity = self.hass.states.get(self.data[CONF_NP_ENTITY])
             try:
-                self.options["currency"] = np_entity.attributes["currency"]
+                self.options[CONF_CURENCY] = np_entity.attributes.get(CONF_CURENCY)
             except (IndexError, KeyError):
                 _LOGGER.warning("Could not extract currency from Nordpool entity")
 
