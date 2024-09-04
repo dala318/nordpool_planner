@@ -28,7 +28,10 @@ Apart from potentially saving some money, this kind of temporal shifting of cons
 
 ### Configuration
 
-1. Add the following to your `configuration.yaml` file:
+> **IMPORTANT NOTE**: With version 2 configuration via `configuration.yaml` is no longer possible. Converting that configuration via "import config" is still not implemented. You wil have to remove the old now broken manual configuration and create a new via the GUI.
+
+
+<!-- 1. Add the following to your  file:
 
     ```yaml
     binary_sensor:
@@ -52,11 +55,11 @@ Apart from potentially saving some money, this kind of temporal shifting of cons
    `static` planner searches for an ammount of cheap hours until a set time (work in progress!)
 
 2. Restart HA again to load the configuration. Now you should see `nordpool_planner_2_10_0_0_0_0` binary_sensor, where
-   the `2_10_0_0_0_0` part corresponds to default values of optional parameters, explained below.
+   the `2_10_0_0_0_0` part corresponds to default values of optional parameters, explained below. -->
 
 ## Optional parameters
 
-There are some optional parameters that could be provided to the sensor, they can be grouped in some categories.
+<!-- There are some optional parameters that could be provided to the sensor, they can be grouped in some categories.
 
 Generic optional: `duration` (2), `var_duration_entity` (""), `accept_cost` (0.0) and `accept_rate` (0.0). Default values in parenthesis.
 
@@ -76,7 +79,7 @@ input_number:
     min: 0
     max: 24
     step: 1
- ```
+ ``` -->
 
 `accept_cost` specifies a price level in the currency of your `nordpool_entity`, that if an "average over a duration" is below this value, it is accepted and used. Even if not the lowest in the range specified.
 
@@ -86,7 +89,7 @@ The planner types has some additional configuration variables
 
 ### Moving
 
-Optional parameter `var_search_length_entity` (""). Default value in parenthesis.
+<!-- Optional parameter `var_search_length_entity` (""). Default value in parenthesis.
 
  ```yaml
  binary_sensor:
@@ -100,7 +103,7 @@ Optional parameter `var_search_length_entity` (""). Default value in parenthesis
      moving:
       search_length: 10
       var_search_length_entity: input_number.look_this_far_ahead
- ```
+ ``` -->
 
 `search_length` can be in the range of 2 to 24 and specifies how many hours ahead to serach for lowest price.
 
@@ -113,7 +116,7 @@ The integration will use minimum of `var_search_length_entity` (if supplied and 
 > **WORK IN PROGRESS**: This version of entity is still not fully tested, may need some more work to work properly.
 
 
-Optional parameters `var_end_hour_entity` ("") and `split_hours` (false). Default values in parenthesis.
+<!-- Optional parameters `var_end_hour_entity` ("") and `split_hours` (false). Default values in parenthesis.
 
  ```yaml
  binary_sensor:
@@ -128,7 +131,7 @@ Optional parameters `var_end_hour_entity` ("") and `split_hours` (false). Defaul
       end_hour: 7
       var_end_hour_entity: input_number.need_fully_charged_car_at
       split_hours: false
- ```
+ ``` -->
 
 `end_hour` can be in the range of 0 to 23 and specifies at what time within 24 hours the ammount of active hours shall be selected.
 

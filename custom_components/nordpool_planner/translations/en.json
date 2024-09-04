@@ -1,0 +1,27 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "description": "Setup a Nordpool Planner",
+                "data": {
+                    "name": "Name of planner",
+                    "type": "Planner type",
+                    "np_entity": "Nordpool entity",
+                    "duration_entity": "Duration: Creates dynamic configuration parameter",
+                    "search_length_entity": "Search length: Creates dynamic configuration parameter",
+                    "end_time_entity": "End time: Creates dynamic configuration parameter",
+                    "accept_cost_entity": "Accept cost: Creates a configuration parameter that turn on if cost below",
+                    "accept_rate_entity": "Accept rate: Creates a configuration parameter that turn on if rate to daily average below",
+                    "high_cost_entity": "High cost: Creates a binary sensor that tell in it's the highest cost (inverse of normal)"
+                }
+            }
+        },
+        "error": {
+            "name_exists": "Name already exists",
+            "invalid_template": "The template is invalid"
+        },
+        "abort": {
+            "already_configured": "Already configured with the same settings or name"
+          }
+    }
+}
