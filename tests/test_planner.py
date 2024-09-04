@@ -17,7 +17,7 @@ from homeassistant.helpers import selector
 async def test_planner_init(hass):
     """Test the planner initialization."""
 
-    NAME = "planner name"
+    NAME = "My planner 1"
     TYPE = "moving"
     DURATION_ENT = "duration_ent"
     SEARCH_LENGTH_ENT = "search_len"
@@ -46,23 +46,3 @@ async def test_planner_init(hass):
     assert planner.name == NAME
     assert planner._is_static == False
     assert planner._is_moving == True
-
-
-# @pytest.mark.asyncio
-# async def test_flow_init(hass):
-#     """Test the initial flow."""
-#     result = await hass.config_entries.flow.async_init(
-#         config_flow.DOMAIN, context={"source": "user"}
-#     )
-
-#     expected = {
-#         "data_schema": SCHEMA_COPY,
-#         # "data_schema": config_flow.DATA_SCHEMA,
-#         "description_placeholders": None,
-#         "errors": {},
-#         "flow_id": mock.ANY,
-#         "handler": "nordpool_planner",
-#         "step_id": "user",
-#         "type": "form",
-#     }
-#     assert expected == result

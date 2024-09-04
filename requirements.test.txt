@@ -2,5 +2,13 @@
 # codecov
 # coverage>=5.2.0,<5.3.0
 # mypy
-# pytest-cov
+
+# fuzzywuzzy
+# levenshtein
+# ruff
+# yamllint
+
+pytest
+pytest-asyncio
+pytest-cov
 pytest-homeassistant-custom-component
