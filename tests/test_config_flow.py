@@ -20,7 +20,7 @@ async def test_flow_init(hass):
         "description_placeholders": None,
         "errors": {},
         "flow_id": mock.ANY,
-        "handler": "steam_wishlist",
+        "handler": "nordpool_planner",
         "step_id": "user",
         "type": "form",
     }
