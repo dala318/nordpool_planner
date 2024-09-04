@@ -65,24 +65,24 @@ async def test_planner_init(hass):
         unique_id="123456",
     )
 
-    # Unnamed binary sensor with device class but has_entity_name False -> no name
-    np_sensor = sensor.SensorEntity()
-    np_sensor.entity_id = NP_ENT
-    np_sensor._attr_device_class = sensor.SensorDeviceClass.MONETARY
+    # # Fake nordpool sensor
+    # np_sensor = sensor.SensorEntity()
+    # np_sensor.entity_id = NP_ENT
+    # np_sensor._attr_device_class = sensor.SensorDeviceClass.MONETARY
 
-    async def async_setup_entry_platform(
-        hass: HomeAssistant,
-        config_entry: config_entries.ConfigEntry,
-        async_add_entities: AddEntitiesCallback,
-    ) -> None:
-        """Set up test sensor platform via config entry."""
-        async_add_entities([np_sensor])
+    # async def async_setup_entry_platform(
+    #     hass: HomeAssistant,
+    #     config_entry: config_entries.ConfigEntry,
+    #     async_add_entities: AddEntitiesCallback,
+    # ) -> None:
+    #     """Set up test sensor platform via config entry."""
+    #     async_add_entities([np_sensor])
 
-    mock_platform(
-        hass,
-        f"{"nordpool"}.{sensor.DOMAIN}",
-        MockPlatform(async_setup_entry=async_setup_entry_platform),
-    )
+    # mock_platform(
+    #     hass,
+    #     f"{"nordpool"}.{sensor.DOMAIN}",
+    #     MockPlatform(async_setup_entry=async_setup_entry_platform),
+    # )
 
     planner = NordpoolPlanner(hass, config_entry)
 
