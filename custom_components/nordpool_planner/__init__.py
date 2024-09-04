@@ -5,7 +5,6 @@ from __future__ import annotations
 import datetime as dt
 import logging
 
-from config.custom_components import nordpool
 from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
 from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN, Platform
 from homeassistant.core import HomeAssistant
@@ -107,12 +106,12 @@ class NordpoolPlanner:
         # Internal states
         self._np_entity = NordpoolEntity(self._config.data[CONF_NP_ENTITY])
 
-        # TODO: Dont seem to work as expected!
-        async_track_state_change_event(
-            self._hass,
-            [self._np_entity.unique_id],
-            self._async_input_changed,
-        )
+        # # TODO: Dont seem to work as expected!
+        # async_track_state_change_event(
+        #     self._hass,
+        #     [self._np_entity.unique_id],
+        #     self._async_input_changed,
+        # )
 
         # Configuration entities
         self._duration_number_entity = ""
@@ -248,7 +247,6 @@ class NordpoolPlanner:
             name=self.name,
             manufacturer="Nordpool",
             entry_type=DeviceEntryType.SERVICE,
-            via_device=(nordpool.DOMAIN, self._np_entity.unique_id),
         )
 
     def input_changed(self, value):
@@ -503,14 +501,20 @@ class NordpoolPricesGroup:
     @property
     def average(self) -> float:
         """The average price of the price group."""
-        if not self.valid:
-            return 1
+        # if not self.valid:
+        #     _LOGGER.warning(
+        #         "Average set to 1 for invalid price group, should not happen"
+        #     )
+        #     return 1
         return sum([p["value"] for p in self._prices]) / len(self._prices)
 
     @property
     def start_time(self) -> dt.datetime:
         """The start time of first price in group."""
         # if not self.valid:
+        #     _LOGGER.warning(
+        #         "Start time set to None for invalid price group, should not happen"
+        #     )
         #     return None
         return self._prices[0]["start"]
 
