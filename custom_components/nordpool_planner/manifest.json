@@ -1,7 +1,7 @@
 {
   "domain": "nordpool_planner",
-  "name": "nordpool_planner",
-  "codeowners": ["@dala318", "@jpulakka"],
+  "name": "Nordpool Planner",
+  "codeowners": ["@dala318"],
   "config_flow": true,
   "dependencies": ["nordpool"],
   "documentation": "https://github.com/dala318/nordpool_planner",
