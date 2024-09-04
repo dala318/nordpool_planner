@@ -2,15 +2,15 @@
 
 from unittest import mock
 
-from config.custom_components.nordpool_planner.const import *
 from custom_components.nordpool_planner import config_flow
 import pytest
-from pytest_homeassistant_custom_component.async_mock import patch
+
+# from pytest_homeassistant_custom_component.async_mock import patch
 import voluptuous as vol
 
+from custom_components.nordpool_planner.const import *
 from homeassistant import config_entries
 from homeassistant.helpers import selector
-
 
 NP_ENTITY_NAME = "sensor.nordpool_ent"
 

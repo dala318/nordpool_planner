@@ -5,7 +5,6 @@ from __future__ import annotations
 import datetime as dt
 import logging
 
-from config.custom_components import nordpool
 from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
 from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN, Platform
 from homeassistant.core import HomeAssistant
@@ -248,7 +247,6 @@ class NordpoolPlanner:
             name=self.name,
             manufacturer="Nordpool",
             entry_type=DeviceEntryType.SERVICE,
-            via_device=(nordpool.DOMAIN, self._np_entity.unique_id),
         )
 
     def input_changed(self, value):
