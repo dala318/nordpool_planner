@@ -6,12 +6,12 @@ from custom_components.nordpool_planner import NordpoolPlanner
 import pytest
 
 # from pytest_homeassistant_custom_component.async_mock import patch
-from pytest_homeassistant_custom_component.common import (
-    MockModule,
-    MockPlatform,
-    mock_integration,
-    mock_platform,
-)
+# from pytest_homeassistant_custom_component.common import (
+#     MockModule,
+#     MockPlatform,
+#     mock_integration,
+#     mock_platform,
+# )
 
 from custom_components.nordpool_planner.const import *
 from homeassistant import config_entries
@@ -31,22 +31,22 @@ async def test_planner_init(hass):
     NP_ENT = "sensor.np_ent"
     CURRENCY = "EUR"
 
-    async def async_setup_entry_init(
-        hass: HomeAssistant, config_entry: config_entries.ConfigEntry
-    ) -> bool:
-        """Set up test config entry."""
-        await hass.config_entries.async_forward_entry_setups(
-            config_entry, [sensor.DOMAIN]
-        )
-        return True
+    # async def async_setup_entry_init(
+    #     hass: HomeAssistant, config_entry: config_entries.ConfigEntry
+    # ) -> bool:
+    #     """Set up test config entry."""
+    #     await hass.config_entries.async_forward_entry_setups(
+    #         config_entry, [sensor.DOMAIN]
+    #     )
+    #     return True
 
-    mock_integration(
-        hass,
-        MockModule(
-            "nordpool",
-            async_setup_entry=async_setup_entry_init,
-        ),
-    )
+    # mock_integration(
+    #     hass,
+    #     MockModule(
+    #         "nordpool",
+    #         async_setup_entry=async_setup_entry_init,
+    #     ),
+    # )
 
     config_entry = config_entries.ConfigEntry(
         data={
