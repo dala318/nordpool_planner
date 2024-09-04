@@ -9,7 +9,7 @@ from homeassistant.components.binary_sensor import (
     BinarySensorEntityDescription,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import STATE_UNKNOWN
+from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
 
@@ -86,9 +86,20 @@ class NordpoolPlannerBinarySensor(NordpoolPlannerEntity, BinarySensorEntity):
     @property
     def is_on(self):
         """Output state."""
-        if self._planner.low_cost_state.starts_at == STATE_UNKNOWN:
-            return STATE_UNKNOWN
-        state = self._planner.low_cost_state.starts_at < dt_util.now()
+        state = STATE_UNKNOWN
+        # TODO: This can be made nicer to get value from states in dictionary in planner
+        if self.entity_description.key == CONF_LOW_COST_ENTITY:
+            if self._planner.low_cost_state.starts_at not in [
+                STATE_UNKNOWN,
+                STATE_UNAVAILABLE,
+            ]:
+                state = self._planner.low_cost_state.starts_at < dt_util.now()
+        if self.entity_description.key == CONF_HIGH_COST_ENTITY:
+            if self._planner.high_cost_state.starts_at not in [
+                STATE_UNKNOWN,
+                STATE_UNAVAILABLE,
+            ]:
+                state = self._planner.high_cost_state.starts_at < dt_util.now()
         _LOGGER.debug(
             'Returning state "%s" of binary sensor "%s"',
             state,
@@ -99,11 +110,30 @@ class NordpoolPlannerBinarySensor(NordpoolPlannerEntity, BinarySensorEntity):
     @property
     def extra_state_attributes(self):
         """Extra state attributes."""
-        return {
-            "starts_at": self._planner.low_cost_state.starts_at,
-            "cost_at": self._planner.low_cost_state.cost_at,
-            "now_cost_rate": self._planner.low_cost_state.now_cost_rate,
+        state_attributes = {
+            "starts_at": STATE_UNKNOWN,
+            "cost_at": STATE_UNKNOWN,
+            "now_cost_rate": STATE_UNKNOWN,
         }
+        # TODO: This can be made nicer to get value from states in dictionary in planner
+        if self.entity_description.key == CONF_LOW_COST_ENTITY:
+            state_attributes = {
+                "starts_at": self._planner.low_cost_state.starts_at,
+                "cost_at": self._planner.low_cost_state.cost_at,
+                "now_cost_rate": self._planner.low_cost_state.now_cost_rate,
+            }
+        elif self.entity_description.key == CONF_HIGH_COST_ENTITY:
+            state_attributes = {
+                "starts_at": self._planner.high_cost_state.starts_at,
+                "cost_at": self._planner.high_cost_state.cost_at,
+                "now_cost_rate": self._planner.high_cost_state.now_cost_rate,
+            }
+        _LOGGER.debug(
+            'Returning extra state attributes "%s" of binary sensor "%s"',
+            state_attributes,
+            self.unique_id,
+        )
+        return state_attributes
 
     async def async_added_to_hass(self) -> None:
         """Load the last known state when added to hass."""

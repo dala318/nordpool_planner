@@ -355,12 +355,6 @@ class NordpoolPlanner:
                 highest_cost_group = p
         self.set_highest_cost_state(highest_cost_group)
 
-        # Schedule update of output sensors
-        if self._low_cost_binary_sensor_entity:
-            self._low_cost_binary_sensor_entity.update_callback()
-        if self._high_cost_binary_sensor_entity:
-            self._high_cost_binary_sensor_entity.update_callback()
-
     def set_lowest_cost_state(self, prices_group: NordpoolPricesGroup) -> None:
         """Set the state to output variable."""
         self.low_cost_state.starts_at = prices_group.start_time
@@ -369,6 +363,8 @@ class NordpoolPlanner:
             self._np_entity.current_price_attr / prices_group.average
         )
         _LOGGER.debug("Wrote lowest cost state: %s", self.low_cost_state)
+        if self._low_cost_binary_sensor_entity:
+            self._low_cost_binary_sensor_entity.update_callback()
 
     def set_highest_cost_state(self, prices_group: NordpoolPricesGroup) -> None:
         """Set the state to output variable."""
@@ -378,6 +374,8 @@ class NordpoolPlanner:
             self._np_entity.current_price_attr / prices_group.average
         )
         _LOGGER.debug("Wrote highest cost state: %s", self.high_cost_state)
+        if self._high_cost_binary_sensor_entity:
+            self._high_cost_binary_sensor_entity.update_callback()
 
     def set_unavailable(self) -> None:
         """Set output state to unavailable."""
@@ -388,6 +386,10 @@ class NordpoolPlanner:
         self.high_cost_state.cost_at = STATE_UNAVAILABLE
         self.high_cost_state.now_cost_rate = STATE_UNAVAILABLE
         _LOGGER.debug("Setting output states to unavailable")
+        if self._low_cost_binary_sensor_entity:
+            self._low_cost_binary_sensor_entity.update_callback()
+        if self._high_cost_binary_sensor_entity:
+            self._high_cost_binary_sensor_entity.update_callback()
 
 
 class NordpoolEntity:
