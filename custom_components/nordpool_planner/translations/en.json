@@ -1,9 +1,7 @@
 {
     "config": {
-        "title": "Nordpool Planner",
         "step": {
             "user": {
-                "title": "Nordpool Planner",
                 "description": "Setup a Nordpool Planner",
                 "data": {
                     "name": "Name of planner",
