@@ -19,6 +19,7 @@ from .const import (
     CONF_ACCEPT_RATE_ENTITY,
     CONF_DURATION_ENTITY,
     CONF_END_TIME_ENTITY,
+    CONF_HIGH_COST_ENTITY,
     CONF_LOW_COST_ENTITY,
     CONF_NP_ENTITY,
     CONF_SEARCH_LENGTH_ENTITY,
@@ -123,6 +124,7 @@ class NordpoolPlanner:
 
         # Output entities
         self._low_cost_binary_sensor_entity = None
+        self._high_cost_binary_sensor_entity = None
         # TODO: Make list?
 
         # Output states
@@ -230,6 +232,8 @@ class NordpoolPlanner:
         # Output binary sensors
         if conf_key == CONF_LOW_COST_ENTITY:
             self._low_cost_binary_sensor_entity = entity
+        elif conf_key == CONF_HIGH_COST_ENTITY:
+            self._high_cost_binary_sensor_entity = entity
         else:
             _LOGGER.warning(
                 'An entity "%s" was registred for update but no match for key "%s"',
@@ -328,16 +332,15 @@ class NordpoolPlanner:
             end_time,
         )
 
+        accept_cost = self._accept_cost
+        accept_rate = self._accept_rate
         lowest_cost_group: NordpoolPricesGroup = prices_groups[0]
         for p in prices_groups:
-            if self._accept_cost and p.average < self._accept_cost:
+            if accept_cost and p.average < accept_cost:
                 _LOGGER.debug("Accept cost fulfilled")
                 self.set_lowest_cost_state(p, now)
                 break
-            if (
-                self._accept_rate
-                and p.average / self._np_entity.average_attr < self._accept_rate
-            ):
+            if accept_rate and p.average / self._np_entity.average_attr < accept_rate:
                 _LOGGER.debug("Accept rate fulfilled")
                 self.set_lowest_cost_state(p, now)
                 break
@@ -355,6 +358,8 @@ class NordpoolPlanner:
         # Schedule update of output sensors
         if self._low_cost_binary_sensor_entity:
             self._low_cost_binary_sensor_entity.update_callback()
+        if self._high_cost_binary_sensor_entity:
+            self._high_cost_binary_sensor_entity.update_callback()
 
     def set_lowest_cost_state(self, prices_group: NordpoolPricesGroup) -> None:
         """Set the state to output variable."""
