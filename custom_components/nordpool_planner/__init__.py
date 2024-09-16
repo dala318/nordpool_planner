@@ -33,16 +33,6 @@ _LOGGER = logging.getLogger(__name__)
 PLATFORMS = [Platform.BINARY_SENSOR, Platform.NUMBER]
 
 
-# async def async_setup(hass: HomeAssistant, config: Config) -> bool:
-#     hass.data.setdefault(DOMAIN, {})
-#     return True
-
-
-# async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-#     entry_data = dict(entry.data)
-#     hass.data[DOMAIN][entry.entry_id] = entry_data
-#     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-#     return True
 async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
     """Set up this integration using UI."""
     config_entry.async_on_unload(config_entry.add_update_listener(async_reload_entry))
@@ -52,9 +42,6 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
 
     if config_entry.entry_id not in hass.data[DOMAIN]:
         hass.data[DOMAIN][config_entry.entry_id] = NordpoolPlanner(hass, config_entry)
-    # else:
-    #     planner = hass.data[DOMAIN][config_entry.entry_id]
-    # await planner.async_config_entry_first_refresh()
 
     if config_entry is not None:
         if config_entry.source == SOURCE_IMPORT:
@@ -67,11 +54,6 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     return True
 
 
-# async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-#     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
-#     if unload_ok:
-#         hass.data[DOMAIN].pop(entry.entry_id)
-#     return unload_ok
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unloading a config_flow entry."""
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
@@ -94,24 +76,20 @@ class NordpoolPlanner:
         self._hass = hass
         self._config = config_entry
 
-        # if self._np_entity.unique_id is not None:
-        #     self.async_on_remove(
-        #         async_track_state_change_event(
-        #             self._hass,
-        #             [self._np_entity.unique_id],
-        #             self._async_input_changed,
-        #         )
-        #     )
-
-        # Internal states
+        # Input entities
         self._np_entity = NordpoolEntity(self._config.data[CONF_NP_ENTITY])
-
-        # # TODO: Dont seem to work as expected!
-        # async_track_state_change_event(
-        #     self._hass,
-        #     [self._np_entity.unique_id],
-        #     self._async_input_changed,
+        # self.async_on_remove(
+        #     async_track_state_change_event(
+        #         self._hass,
+        #         [self._np_entity.unique_id],
+        #         self._async_input_changed,
+        #     )
         # )
+        async_track_state_change_event(
+            self._hass,
+            [self._np_entity.unique_id],
+            self._async_input_changed,
+        )
 
         # Configuration entities
         self._duration_number_entity = ""
