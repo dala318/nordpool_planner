@@ -58,7 +58,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unloading a config_flow entry."""
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
-        hass.data[DOMAIN].pop(entry.entry_id)
+        planner = hass.data[DOMAIN].pop(entry.entry_id)
+        planner.cleanup()
     return unload_ok
 
 
@@ -75,20 +76,16 @@ class NordpoolPlanner:
         """Initialize my coordinator."""
         self._hass = hass
         self._config = config_entry
+        self._state_change_listners = []
 
         # Input entities
         self._np_entity = NordpoolEntity(self._config.data[CONF_NP_ENTITY])
-        # self.async_on_remove(
-        #     async_track_state_change_event(
-        #         self._hass,
-        #         [self._np_entity.unique_id],
-        #         self._async_input_changed,
-        #     )
-        # )
-        async_track_state_change_event(
-            self._hass,
-            [self._np_entity.unique_id],
-            self._async_input_changed,
+        self._state_change_listners.append(
+            async_track_state_change_event(
+                self._hass,
+                [self._np_entity.unique_id],
+                self._async_input_changed,
+            )
         )
 
         # Configuration entities
@@ -150,6 +147,11 @@ class NordpoolPlanner:
         """Get accept rate parameter."""
         return self.get_number_entity_value(self._accept_rate_number_entity)
 
+    def cleanup(self):
+        """Clenaup by removing event listners."""
+        for lister in self._state_change_listners:
+            lister()
+
     def get_number_entity_value(
         self, entity_id: str, integer: bool = False
     ) -> float | int | None:
@@ -197,11 +199,12 @@ class NordpoolPlanner:
                 entity_id,
                 conf_key,
             )
-        # TODO: Dont seem to work as expected!
-        async_track_state_change_event(
-            self._hass,
-            [entity_id],
-            self._async_input_changed,
+        self._state_change_listners.append(
+            async_track_state_change_event(
+                self._hass,
+                [entity_id],
+                self._async_input_changed,
+            )
         )
 
     def register_output_listner_entity(self, entity, conf_key="") -> None:
