@@ -52,7 +52,7 @@ SEARCH_LENGTH_ENTITY_DESCRIPTION = NumberEntityDescription(
     key=CONF_SEARCH_LENGTH_ENTITY,
     device_class=NumberDeviceClass.DURATION,
     native_min_value=3,
-    native_max_value=12,
+    native_max_value=23,  # Let's keep it below 24h to not risk wrapping a day.
     native_step=1,
     native_unit_of_measurement=UnitOfTime.HOURS,
 )
@@ -78,7 +78,7 @@ async def async_setup_entry(
         entities.append(
             NordpoolPlannerNumber(
                 planner,
-                callback=planner.input_changed,
+                # callback=planner.input_changed,
                 start_val=3,
                 entity_description=DURATION_ENTITY_DESCRIPTION,
             )
@@ -86,7 +86,7 @@ async def async_setup_entry(
 
     if config_entry.data.get(CONF_ACCEPT_COST_ENTITY):
         entity_description = ACCEPT_COST_ENTITY_DESCRIPTION
-        # Override if curensy option is set
+        # Override if currency option is set
         if currency := config_entry.options.get(CONF_CURENCY):
             entity_description = NumberEntityDescription(
                 key=ACCEPT_COST_ENTITY_DESCRIPTION.key,
@@ -99,7 +99,7 @@ async def async_setup_entry(
         entities.append(
             NordpoolPlannerNumber(
                 planner,
-                callback=planner.input_changed,
+                # callback=planner.input_changed,
                 start_val=0.0,
                 entity_description=entity_description,
             )
@@ -109,7 +109,7 @@ async def async_setup_entry(
         entities.append(
             NordpoolPlannerNumber(
                 planner,
-                callback=planner.input_changed,
+                # callback=planner.input_changed,
                 start_val=0.1,
                 entity_description=ACCEPT_RATE_ENTITY_DESCRIPTION,
             )
@@ -119,7 +119,7 @@ async def async_setup_entry(
         entities.append(
             NordpoolPlannerNumber(
                 planner,
-                callback=planner.input_changed,
+                # callback=planner.input_changed,
                 start_val=10,
                 entity_description=SEARCH_LENGTH_ENTITY_DESCRIPTION,
             )
@@ -129,7 +129,7 @@ async def async_setup_entry(
         entities.append(
             NordpoolPlannerNumber(
                 planner,
-                callback=planner.input_changed,
+                # callback=planner.input_changed,
                 start_val=7,
                 entity_description=END_TIME_ENTITY_DESCRIPTION,
             )
@@ -145,7 +145,7 @@ class NordpoolPlannerNumber(NordpoolPlannerEntity, RestoreNumber):
     def __init__(
         self,
         planner,
-        callback,
+        # callback,
         start_val,
         entity_description: NumberEntityDescription,
     ) -> None:
@@ -153,7 +153,7 @@ class NordpoolPlannerNumber(NordpoolPlannerEntity, RestoreNumber):
         super().__init__(planner)
         self.entity_description = entity_description
         self._default_value = start_val
-        self._callback = callback
+        # self._callback = callback
         self._attr_name = (
             self._planner.name
             + " "
@@ -188,5 +188,5 @@ class NordpoolPlannerNumber(NordpoolPlannerEntity, RestoreNumber):
             value,
             self.name,
         )
-        self._callback(value)
+        # self._callback(value)
         self.async_schedule_update_ha_state()
