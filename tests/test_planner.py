@@ -35,7 +35,7 @@ CONF_ENTRY = config_entries.ConfigEntry(
         CONF_DURATION_ENTITY: DURATION_ENT,
         CONF_SEARCH_LENGTH_ENTITY: SEARCH_LENGTH_ENT,
     },
-    options={CONF_CURENCY: CURRENCY},
+    options={CONF_CURRENCY: CURRENCY},
     domain=DOMAIN,
     version=1,
     minor_version=2,
