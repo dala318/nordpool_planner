@@ -113,20 +113,26 @@ class NordpoolPlannerBinarySensor(NordpoolPlannerEntity, BinarySensorEntity):
         state_attributes = {
             "starts_at": STATE_UNKNOWN,
             "cost_at": STATE_UNKNOWN,
-            "now_cost_rate": STATE_UNKNOWN,
+            "current_cost": self._planner.price_now,
+            "current_cost_rate": STATE_UNKNOWN,
+            "price_sensor": self._planner.price_sensor_id,
         }
         # TODO: This can be made nicer to get value from states in dictionary in planner
         if self.entity_description.key == CONF_LOW_COST_ENTITY:
             state_attributes = {
                 "starts_at": self._planner.low_cost_state.starts_at,
                 "cost_at": self._planner.low_cost_state.cost_at,
-                "now_cost_rate": self._planner.low_cost_state.now_cost_rate,
+                "current_cost": self._planner.price_now,
+                "current_cost_rate": self._planner.low_cost_state.now_cost_rate,
+                "price_sensor": self._planner.price_sensor_id,
             }
         elif self.entity_description.key == CONF_HIGH_COST_ENTITY:
             state_attributes = {
                 "starts_at": self._planner.high_cost_state.starts_at,
                 "cost_at": self._planner.high_cost_state.cost_at,
-                "now_cost_rate": self._planner.high_cost_state.now_cost_rate,
+                "current_cost": self._planner.price_now,
+                "current_cost_rate": self._planner.high_cost_state.now_cost_rate,
+                "price_sensor": self._planner.price_sensor_id,
             }
         _LOGGER.debug(
             'Returning extra state attributes "%s" of binary sensor "%s"',
@@ -141,7 +147,7 @@ class NordpoolPlannerBinarySensor(NordpoolPlannerEntity, BinarySensorEntity):
         self._planner.register_output_listener_entity(self, self.entity_description.key)
 
     def update_callback(self) -> None:
-        """Call from planner that new data avaialble."""
+        """Call from planner that new data available."""
         self.schedule_update_ha_state()
 
     # async def async_update(self):

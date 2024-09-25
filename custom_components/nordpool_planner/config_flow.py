@@ -8,18 +8,17 @@ from typing import Any
 import voluptuous as vol
 
 from homeassistant import config_entries
+from homeassistant.const import ATTR_NAME, ATTR_UNIT_OF_MEASUREMENT
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import selector
 
 from .const import (
     CONF_ACCEPT_COST_ENTITY,
     CONF_ACCEPT_RATE_ENTITY,
-    CONF_CURRENCY,
     CONF_DURATION_ENTITY,
     CONF_END_TIME_ENTITY,
     CONF_HIGH_COST_ENTITY,
     CONF_LOW_COST_ENTITY,
-    CONF_NAME,
     CONF_NP_ENTITY,
     CONF_SEARCH_LENGTH_ENTITY,
     CONF_STARTS_AT_ENTITY,
@@ -36,7 +35,8 @@ _LOGGER = logging.getLogger(__name__)
 class NordpoolPlannerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Nordpool Planner config flow."""
 
-    VERSION = 1
+    VERSION = 2
+    MINOR_VERSION = 0
     data = None
     options = None
     _reauth_entry: config_entries.ConfigEntry | None = None
@@ -60,12 +60,14 @@ class NordpoolPlannerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             self.options = {}
             np_entity = self.hass.states.get(self.data[CONF_NP_ENTITY])
             try:
-                self.options[CONF_CURRENCY] = np_entity.attributes.get(CONF_CURRENCY)
+                self.options[ATTR_UNIT_OF_MEASUREMENT] = np_entity.attributes.get(
+                    ATTR_UNIT_OF_MEASUREMENT
+                )
             except (IndexError, KeyError):
                 _LOGGER.warning("Could not extract currency from Nordpool entity")
 
             await self.async_set_unique_id(
-                self.data[CONF_NAME]
+                self.data[ATTR_NAME]
                 + "_"
                 + self.data[CONF_NP_ENTITY]
                 + "_"
@@ -79,22 +81,22 @@ class NordpoolPlannerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 self.data,
             )
             return self.async_create_entry(
-                title=self.data[CONF_NAME], data=self.data, options=self.options
+                title=self.data[ATTR_NAME], data=self.data, options=self.options
             )
 
         sensor_entities = self.hass.states.async_entity_ids(domain_filter="sensor")
-        selected_entities = [s for s in sensor_entities if "nordpool" in s]
-        # TODO: Enable usage for ENTSO-E prices integration
-        # selected_entities += [
-        #     s for s in sensor_entities if "current_electricity_market_price" in s
-        # ]
+        selected_entities = [
+            s
+            for s in sensor_entities
+            if "nordpool" in s or "average_electricity_price_today" in s
+        ]
 
         if len(selected_entities) == 0:
             errors["base"] = "No Nordpool entity found"
 
         schema = vol.Schema(
             {
-                vol.Required(CONF_NAME): str,
+                vol.Required(ATTR_NAME): str,
                 vol.Required(CONF_TYPE): selector.SelectSelector(
                     selector.SelectSelectorConfig(options=CONF_TYPE_LIST),
                 ),
