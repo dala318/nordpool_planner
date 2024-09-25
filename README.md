@@ -34,33 +34,33 @@ During setup some preconditions and selections are needed:
 * Give a name to the service
 * Select type "Moving" or "Static", more about these below (only moving is properly implemented)
 * Select Nordpool prices entity from list to base states on
-* Select which optional featues you want activated, more avout these below as well
+* Select which optional features you want activated, more about these below as well
 * Submit and set your configuration parameters
 
 ### Moving
 
 Two non-optional configuration entities will be created and you need to set these to a value that matches your consumption profile.
 
-* `search_length` specifies how many hours ahead to serach for lowest price.
+* `search_length` specifies how many hours ahead to search for lowest price.
 * `duration` specifies how large window to average when searching for lowest price
 
-The service will then take `duration` number of consecutive prices from the nordpool sensor starting fron `now` and average them, then shift start one hour and repeat, until reaching `search_length` from now.
-If no optional features activated the `duration` window in the current range of prices within `search_length` with lowest average is selected as sheapest and the `low_cost` entity will turn on if `now` is within those hours.
+The service will then take `duration` number of consecutive prices from the nordpool sensor starting from `now` and average them, then shift start one hour and repeat, until reaching `search_length` from now.
+If no optional features activated the `duration` window in the current range of prices within `search_length` with lowest average is selected as cheapest and the `low_cost` entity will turn on if `now` is within those hours.
 
-In general you should set `search_length` to a value how long you could wait to activate high-consumption device and `duration` to how long it have to be kept active. But you have to test different settings to find your optimal configuration. 
+In general you should set `search_length` to a value how long you could wait to activate high-consumption device and `duration` to how long it have to be kept active. But you have to test different settings to find your optimal configuration.
 
-What should be said is that since the `search_length` window is continously moving forward for every hour that passes the lowest cost `duaration` may change as new prices comes inside range of search. There is also no guarante that it will keep active for `duration` once activated.
+What should be said is that since the `search_length` window is continuously moving forward for every hour that passes the lowest cost `duration` may change as new prices comes inside range of search. There is also no guarantee that it will keep active for `duration` once activated.
 
 ### Static
 
 > **WORK IN PROGRESS**: This version of entity is still not fully tested, may need some more work to work properly.
 
-`end_hour` can be in the range of 0 to 23 and specifies at what time within 24 hours the ammount of active hours shall be selected.
+`end_hour` can be in the range of 0 to 23 and specifies at what time within 24 hours the amount of active hours shall be selected.
 
 The integration will use `var_end_hour_entity` if supplied and can be interpreted as int, otherwise `end_hour` or the default value.
 
 > **NOT IMPLEMENTED**: No support implemented to use this setting
-`split_hours` tell if allowed to find low-cost hours that are not censecutive
+`split_hours` tell if allowed to find low-cost hours that are not consecutive
 
 ## Optional features
 
@@ -81,7 +81,7 @@ This is more dynamic in the sense that it adapts to overall price level, but the
 
 ### High cost
 
-This was requested as an extra ferature and creates a binary sensor which tell in the current `duration` has the highest cost in the `search_length`. It's to large extent the inverse of the standard `low_cost` entity but without the extra options for `accept_cost` or `accept_rate`.
+This was requested as an extra feature and creates a binary sensor which tell in the current `duration` has the highest cost in the `search_length`. It's to large extent the inverse of the standard `low_cost` entity but without the extra options for `accept_cost` or `accept_rate`.
 
 ### Starts at
 
@@ -104,24 +104,24 @@ Apart from the true/false if now is the time to turn on electricity usage the se
 
 Some words should be said about the usage and how it behaves.
 
-The search length variable should be set to to a value within which you could accept no high electricity usage, and the ratio window/search should somewhat correspond to the active/passive time of your main user of electricity. Still, the search window for the optimal spot to electricity is moving along in front of corrent time, so there might be a longer duration of passive usage than the search length. Therefor keeping the search length low (3-5h) should likely be optimal, unless you have a large storage capacity of electricity/heat that can wait for a longer duration and when cheap electricity draw as much as possible.
+The search length variable should be set to to a value within which you could accept no high electricity usage, and the ratio window/search should somewhat correspond to the active/passive time of your main user of electricity. Still, the search window for the optimal spot to electricity is moving along in front of current time, so there might be a longer duration of passive usage than the search length. Therefor keeping the search length low (3-5h) should likely be optimal, unless you have a large storage capacity of electricity/heat that can wait for a longer duration and when cheap electricity draw as much as possible.
 
 If to explain by an image, first orange is now, second orange is `search_length` ahead in time, width of green is `duration` and placed where it has found the cheapest average price within the orange.
 
 ![image](planning_example.png)
 
-Try it and feedback how it works or if there are any improvment to be done!
+Try it and feedback how it works or if there are any improvement to be done!
 
 ### Tuning your settings
 
-I found it usefull to setup a simple history graph chart comparing the values from `nordpool`, `nordpool_diff` and `nordpool_planner` like this.
+I found it useful to setup a simple history graph chart comparing the values from `nordpool`, `nordpool_diff` and `nordpool_planner` like this.
 
 ![image](planner_evaluation_chart.png)
 
 Where from top to bottom my named entities are:
 
 * nordpool_diff: duration 3 in search_length 10, accept_cost 2.0
-* nordpool_diff: duration 2 in search_lenth 5, accept_cost 2.0 and accept_rate 0.7
+* nordpool_diff: duration 2 in search_length 5, accept_cost 2.0 and accept_rate 0.7
 * nordpool average: just a template sensor extracting the nordpool attribute average to an entity for easier tracking and comparisons "{{ state_attr('sensor.nordpool_kwh_se3_sek_3_10_025', 'average') | float }}"
 * nordpool
 * nordpool_diff:
