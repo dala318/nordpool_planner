@@ -8,15 +8,15 @@ import pytest
 # from pytest_homeassistant_custom_component.async_mock import patch
 import voluptuous as vol
 
-from custom_components.nordpool_planner.const import *
 from homeassistant import config_entries
+from homeassistant.const import ATTR_NAME, ATTR_UNIT_OF_MEASUREMENT
 from homeassistant.helpers import selector
 
 NP_ENTITY_NAME = "sensor.nordpool_ent"
 
 SCHEMA_COPY = vol.Schema(
     {
-        vol.Required(CONF_NAME): str,
+        vol.Required(ATTR_NAME): str,
         vol.Required(CONF_TYPE): selector.SelectSelector(
             selector.SelectSelectorConfig(options=CONF_TYPE_LIST),
         ),
