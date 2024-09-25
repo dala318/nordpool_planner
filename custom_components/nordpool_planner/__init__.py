@@ -18,8 +18,6 @@ from .const import (
     CONF_ACCEPT_RATE_ENTITY,
     CONF_DURATION_ENTITY,
     CONF_END_TIME_ENTITY,
-    CONF_HIGH_COST_ENTITY,
-    CONF_LOW_COST_ENTITY,
     CONF_NP_ENTITY,
     CONF_SEARCH_LENGTH_ENTITY,
     CONF_TYPE,
@@ -76,11 +74,11 @@ class NordpoolPlanner:
         """Initialize my coordinator."""
         self._hass = hass
         self._config = config_entry
-        self._state_change_listners = []
+        self._state_change_listeners = []
 
         # Input entities
         self._np_entity = NordpoolEntity(self._config.data[CONF_NP_ENTITY])
-        self._state_change_listners.append(
+        self._state_change_listeners.append(
             async_track_state_change_event(
                 self._hass,
                 [self._np_entity.unique_id],
@@ -97,7 +95,7 @@ class NordpoolPlanner:
         # TODO: Make dictionary?
 
         # Output entities
-        self._output_listners = {}
+        self._output_listeners = {}
 
         # Output states
         self.low_cost_state = NordpoolPlannerState()
@@ -146,8 +144,8 @@ class NordpoolPlanner:
         return self.get_number_entity_value(self._accept_rate_number_entity)
 
     def cleanup(self):
-        """Clenaup by removing event listners."""
-        for lister in self._state_change_listners:
+        """Cleanup by removing event listeners."""
+        for lister in self._state_change_listeners:
             lister()
 
     def get_number_entity_value(
@@ -193,11 +191,11 @@ class NordpoolPlanner:
             self._end_time_number_entity = entity_id
         else:
             _LOGGER.warning(
-                'An entity "%s" was registred for callback but no match for key "%s"',
+                'An entity "%s" was registered for callback but no match for key "%s"',
                 entity_id,
                 conf_key,
             )
-        self._state_change_listners.append(
+        self._state_change_listeners.append(
             async_track_state_change_event(
                 self._hass,
                 [entity_id],
@@ -205,16 +203,16 @@ class NordpoolPlanner:
             )
         )
 
-    def register_output_listner_entity(self, entity, conf_key="") -> None:
+    def register_output_listener_entity(self, entity, conf_key="") -> None:
         """Register output entity."""
-        if self._output_listners.get(conf_key):
+        if self._output_listeners.get(conf_key):
             _LOGGER.warning(
-                'An output listner with key "%s" and unique id "%s" is overriding previous entity "%s"',
+                'An output listener with key "%s" and unique id "%s" is overriding previous entity "%s"',
                 conf_key,
-                self._output_listners.get(conf_key).entity_id,
+                self._output_listeners.get(conf_key).entity_id,
                 entity.entity_id,
             )
-        self._output_listners[conf_key] = entity
+        self._output_listeners[conf_key] = entity
 
     def get_device_info(self) -> DeviceInfo:
         """Get device info to group entities."""
@@ -226,7 +224,7 @@ class NordpoolPlanner:
         )
 
     def input_changed(self, value):
-        """Input entitiy callback to initiate a planner update."""
+        """Input entity callback to initiate a planner update."""
         _LOGGER.debug("Sensor change event from callback: %s", value)
         self.update()
 
@@ -348,8 +346,8 @@ class NordpoolPlanner:
         else:
             self.low_cost_state.now_cost_rate = STATE_UNAVAILABLE
         _LOGGER.debug("Wrote lowest cost state: %s", self.low_cost_state)
-        for listner in self._output_listners.values():
-            listner.update_callback()
+        for listener in self._output_listeners.values():
+            listener.update_callback()
 
     def set_highest_cost_state(self, prices_group: NordpoolPricesGroup) -> None:
         """Set the state to output variable."""
@@ -362,8 +360,8 @@ class NordpoolPlanner:
         else:
             self.low_cost_state.now_cost_rate = STATE_UNAVAILABLE
         _LOGGER.debug("Wrote highest cost state: %s", self.high_cost_state)
-        for listner in self._output_listners.values():
-            listner.update_callback()
+        for listener in self._output_listeners.values():
+            listener.update_callback()
 
     def set_unavailable(self) -> None:
         """Set output state to unavailable."""
@@ -374,12 +372,12 @@ class NordpoolPlanner:
         self.high_cost_state.cost_at = STATE_UNAVAILABLE
         self.high_cost_state.now_cost_rate = STATE_UNAVAILABLE
         _LOGGER.debug("Setting output states to unavailable")
-        for listner in self._output_listners.values():
-            listner.update_callback()
+        for listener in self._output_listeners.values():
+            listener.update_callback()
 
 
 class NordpoolEntity:
-    """Represenatation for Nordpool state."""
+    """Representation for Nordpool state."""
 
     def __init__(self, unique_id: str) -> None:
         """Initialize state tracker."""
@@ -433,7 +431,7 @@ class NordpoolEntity:
             )
         else:
             _LOGGER.debug(
-                "Nordpool sensor %s was updated sucsessfully", self._unique_id
+                "Nordpool sensor %s was updated successfully", self._unique_id
             )
             if self._np is None:
                 pass
@@ -446,7 +444,7 @@ class NordpoolEntity:
     def get_prices_group(
         self, start: dt.datetime, end: dt.datetime
     ) -> NordpoolPricesGroup:
-        """Get a range of prices from NP given the start and end datatimes.
+        """Get a range of prices from NP given the start and end datetimes.
 
         Ex. If start is 7:05 and end 10:05, a list of 4 prices will be returned,
         7, 8, 9 & 10.

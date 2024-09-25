@@ -22,7 +22,7 @@ from . import (
     NordpoolPlanner,
     NordpoolPlannerEntity,
 )
-from .const import CONF_CURENCY, DOMAIN
+from .const import CONF_CURRENCY, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -87,7 +87,7 @@ async def async_setup_entry(
     if config_entry.data.get(CONF_ACCEPT_COST_ENTITY):
         entity_description = ACCEPT_COST_ENTITY_DESCRIPTION
         # Override if currency option is set
-        if currency := config_entry.options.get(CONF_CURENCY):
+        if currency := config_entry.options.get(CONF_CURRENCY):
             entity_description = NumberEntityDescription(
                 key=ACCEPT_COST_ENTITY_DESCRIPTION.key,
                 device_class=ACCEPT_COST_ENTITY_DESCRIPTION.device_class,

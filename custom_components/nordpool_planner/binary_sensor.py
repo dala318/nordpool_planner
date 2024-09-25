@@ -138,7 +138,7 @@ class NordpoolPlannerBinarySensor(NordpoolPlannerEntity, BinarySensorEntity):
     async def async_added_to_hass(self) -> None:
         """Load the last known state when added to hass."""
         await super().async_added_to_hass()
-        self._planner.register_output_listner_entity(self, self.entity_description.key)
+        self._planner.register_output_listener_entity(self, self.entity_description.key)
 
     def update_callback(self) -> None:
         """Call from planner that new data avaialble."""

@@ -14,7 +14,7 @@ from homeassistant.helpers import selector
 from .const import (
     CONF_ACCEPT_COST_ENTITY,
     CONF_ACCEPT_RATE_ENTITY,
-    CONF_CURENCY,
+    CONF_CURRENCY,
     CONF_DURATION_ENTITY,
     CONF_END_TIME_ENTITY,
     CONF_HIGH_COST_ENTITY,
@@ -60,7 +60,7 @@ class NordpoolPlannerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             self.options = {}
             np_entity = self.hass.states.get(self.data[CONF_NP_ENTITY])
             try:
-                self.options[CONF_CURENCY] = np_entity.attributes.get(CONF_CURENCY)
+                self.options[CONF_CURRENCY] = np_entity.attributes.get(CONF_CURRENCY)
             except (IndexError, KeyError):
                 _LOGGER.warning("Could not extract currency from Nordpool entity")
 
@@ -84,7 +84,7 @@ class NordpoolPlannerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         sensor_entities = self.hass.states.async_entity_ids(domain_filter="sensor")
         selected_entities = [s for s in sensor_entities if "nordpool" in s]
-        # TODO: Enable usage for e-ENTSO prices integration
+        # TODO: Enable usage for ENTSO-E prices integration
         # selected_entities += [
         #     s for s in sensor_entities if "current_electricity_market_price" in s
         # ]
