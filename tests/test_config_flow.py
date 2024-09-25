@@ -3,6 +3,7 @@
 from unittest import mock
 
 from custom_components.nordpool_planner import config_flow
+from custom_components.nordpool_planner.const import *
 import pytest
 
 # from pytest_homeassistant_custom_component.async_mock import patch
