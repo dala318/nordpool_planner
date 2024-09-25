@@ -314,10 +314,18 @@ class NordpoolPlanner:
                 _LOGGER.debug("Accept cost fulfilled")
                 self.set_lowest_cost_state(p, now)
                 break
-            if accept_rate and p.average / self._np_entity.average_attr < accept_rate:
-                _LOGGER.debug("Accept rate fulfilled")
-                self.set_lowest_cost_state(p, now)
-                break
+            if accept_rate:
+                if self._np_entity.average_attr == 0:
+                    if p.average <= 0 and accept_rate <= 0:
+                        _LOGGER.debug(
+                            "Accept rate indirectly fulfilled (NP average 0 but cost and accept rate <= 0)"
+                        )
+                        self.set_lowest_cost_state(p, now)
+                        break
+                elif (p.average / self._np_entity.average_attr) < accept_rate:
+                    _LOGGER.debug("Accept rate fulfilled")
+                    self.set_lowest_cost_state(p, now)
+                    break
             if p.average < lowest_cost_group.average:
                 lowest_cost_group = p
         else:
@@ -333,9 +341,12 @@ class NordpoolPlanner:
         """Set the state to output variable."""
         self.low_cost_state.starts_at = prices_group.start_time
         self.low_cost_state.cost_at = prices_group.average
-        self.low_cost_state.now_cost_rate = (
-            self._np_entity.current_price_attr / prices_group.average
-        )
+        if prices_group.average != 0:
+            self.low_cost_state.now_cost_rate = (
+                self._np_entity.current_price_attr / prices_group.average
+            )
+        else:
+            self.low_cost_state.now_cost_rate = STATE_UNAVAILABLE
         _LOGGER.debug("Wrote lowest cost state: %s", self.low_cost_state)
         for listner in self._output_listners.values():
             listner.update_callback()
@@ -344,9 +355,12 @@ class NordpoolPlanner:
         """Set the state to output variable."""
         self.high_cost_state.starts_at = prices_group.start_time
         self.high_cost_state.cost_at = prices_group.average
-        self.high_cost_state.now_cost_rate = (
-            self._np_entity.current_price_attr / prices_group.average
-        )
+        if prices_group.average != 0:
+            self.high_cost_state.now_cost_rate = (
+                self._np_entity.current_price_attr / prices_group.average
+            )
+        else:
+            self.low_cost_state.now_cost_rate = STATE_UNAVAILABLE
         _LOGGER.debug("Wrote highest cost state: %s", self.high_cost_state)
         for listner in self._output_listners.values():
             listner.update_callback()
