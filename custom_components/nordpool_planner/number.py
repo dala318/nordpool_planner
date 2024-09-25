@@ -10,7 +10,12 @@ from homeassistant.components.number import (
     RestoreNumber,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN, UnitOfTime
+from homeassistant.const import (
+    ATTR_UNIT_OF_MEASUREMENT,
+    STATE_UNAVAILABLE,
+    STATE_UNKNOWN,
+    UnitOfTime,
+)
 from homeassistant.core import HomeAssistant
 
 from . import (
@@ -22,7 +27,7 @@ from . import (
     NordpoolPlanner,
     NordpoolPlannerEntity,
 )
-from .const import CONF_CURRENCY, DOMAIN
+from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -87,14 +92,14 @@ async def async_setup_entry(
     if config_entry.data.get(CONF_ACCEPT_COST_ENTITY):
         entity_description = ACCEPT_COST_ENTITY_DESCRIPTION
         # Override if currency option is set
-        if currency := config_entry.options.get(CONF_CURRENCY):
+        if unit_of_measurement := config_entry.options.get(ATTR_UNIT_OF_MEASUREMENT):
             entity_description = NumberEntityDescription(
                 key=ACCEPT_COST_ENTITY_DESCRIPTION.key,
                 device_class=ACCEPT_COST_ENTITY_DESCRIPTION.device_class,
                 native_min_value=ACCEPT_COST_ENTITY_DESCRIPTION.native_min_value,
                 native_max_value=ACCEPT_COST_ENTITY_DESCRIPTION.native_max_value,
-                native_step=ACCEPT_COST_ENTITY_DESCRIPTION.step,
-                native_unit_of_measurement=currency,
+                native_step=ACCEPT_COST_ENTITY_DESCRIPTION.native_step,
+                native_unit_of_measurement=unit_of_measurement,
             )
         entities.append(
             NordpoolPlannerNumber(

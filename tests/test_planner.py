@@ -19,23 +19,24 @@ from homeassistant import config_entries
 # from homeassistant.components import sensor
 # from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.const import ATTR_NAME, ATTR_UNIT_OF_MEASUREMENT
 
 NAME = "My planner 1"
 TYPE = "moving"
 DURATION_ENT = "duration_ent"
 SEARCH_LENGTH_ENT = "search_len"
 NP_ENT = "sensor.np_ent"
-CURRENCY = "EUR"
+CURRENCY = "EUR/kWh"
 
 CONF_ENTRY = config_entries.ConfigEntry(
     data={
-        CONF_NAME: NAME,
+        ATTR_NAME: NAME,
         CONF_TYPE: TYPE,
         CONF_NP_ENTITY: NP_ENT,
         CONF_DURATION_ENTITY: DURATION_ENT,
         CONF_SEARCH_LENGTH_ENTITY: SEARCH_LENGTH_ENT,
     },
-    options={CONF_CURRENCY: CURRENCY},
+    options={ATTR_UNIT_OF_MEASUREMENT: CURRENCY},
     domain=DOMAIN,
     version=1,
     minor_version=2,

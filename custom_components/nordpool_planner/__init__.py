@@ -6,13 +6,19 @@ import datetime as dt
 import logging
 
 from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
-from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN, Platform
+from homeassistant.const import (
+    ATTR_UNIT_OF_MEASUREMENT,
+    STATE_UNAVAILABLE,
+    STATE_UNKNOWN,
+    Platform,
+)
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.event import async_track_state_change_event
 from homeassistant.util import dt as dt_util
 
+from .config_flow import NordpoolPlannerConfigFlow
 from .const import (
     CONF_ACCEPT_COST_ENTITY,
     CONF_ACCEPT_RATE_ENTITY,
@@ -67,6 +73,55 @@ async def async_reload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> 
     await async_setup_entry(hass, config_entry)
 
 
+async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+    """Migrate old entry."""
+    _LOGGER.debug(
+        "Migrating configuration from version %s.%s",
+        config_entry.version,
+        config_entry.minor_version,
+    )
+    installed_version = NordpoolPlannerConfigFlow.VERSION
+    installed_minor_version = NordpoolPlannerConfigFlow.MINOR_VERSION
+
+    if config_entry.version > installed_version:
+        # Downgraded from a future version
+        return False
+
+    if config_entry.version == 1:
+        new_data = {**config_entry.data}
+        new_options = {**config_entry.options}
+
+        np_entity = hass.states.get(new_data[CONF_NP_ENTITY])
+        try:
+            uom = np_entity.attributes.get(ATTR_UNIT_OF_MEASUREMENT)
+            new_options.pop("currency")
+            new_options[ATTR_UNIT_OF_MEASUREMENT] = uom
+
+        except (IndexError, KeyError):
+            _LOGGER.warning("Could not extract currency from Nordpool entity")
+            return False
+
+        # if config_entry.minor_version < 2:
+        #     # Modify Config Entry data with changes in version 1.2
+        #     pass
+
+        hass.config_entries.async_update_entry(
+            config_entry,
+            data=new_data,
+            options=new_options,
+            minor_version=installed_minor_version,
+            version=installed_version,
+        )
+
+    _LOGGER.debug(
+        "Migration to configuration version %s.%s successful",
+        config_entry.version,
+        config_entry.minor_version,
+    )
+
+    return True
+
+
 class NordpoolPlanner:
     """Planner base class."""
 
@@ -105,6 +160,16 @@ class NordpoolPlanner:
     def name(self) -> str:
         """Name of planner."""
         return self._config.data["name"]
+
+    @property
+    def price_sensor_id(self) -> str:
+        """Entity id of source sensor."""
+        return self._np_entity.unique_id
+
+    @property
+    def price_now(self) -> str:
+        """Current price from source sensor."""
+        return self._np_entity.current_price_attr
 
     @property
     def _duration(self) -> int:
@@ -296,6 +361,7 @@ class NordpoolPlanner:
                 end_time,
                 duration,
             )
+            return
 
         _LOGGER.debug(
             "Processing %s prices_groups found in range %s to %s",
@@ -310,7 +376,7 @@ class NordpoolPlanner:
         for p in prices_groups:
             if accept_cost and p.average < accept_cost:
                 _LOGGER.debug("Accept cost fulfilled")
-                self.set_lowest_cost_state(p, now)
+                self.set_lowest_cost_state(p)
                 break
             if accept_rate:
                 if self._np_entity.average_attr == 0:
@@ -318,11 +384,11 @@ class NordpoolPlanner:
                         _LOGGER.debug(
                             "Accept rate indirectly fulfilled (NP average 0 but cost and accept rate <= 0)"
                         )
-                        self.set_lowest_cost_state(p, now)
+                        self.set_lowest_cost_state(p)
                         break
                 elif (p.average / self._np_entity.average_attr) < accept_rate:
                     _LOGGER.debug("Accept rate fulfilled")
-                    self.set_lowest_cost_state(p, now)
+                    self.set_lowest_cost_state(p)
                     break
             if p.average < lowest_cost_group.average:
                 lowest_cost_group = p
@@ -396,38 +462,66 @@ class NordpoolEntity:
         return self._np is not None
 
     @property
-    def prices(self):
-        """Get the prices."""
-        np_prices = self._np.attributes["today"]
-        if self._np.attributes["tomorrow_valid"]:
-            np_prices += self._np.attributes["tomorrow"]
-        return np_prices
-
-    @property
-    def _prices_raw(self):
-        np_prices = self._np.attributes["raw_today"]
-        if self._np.attributes["tomorrow_valid"]:
-            np_prices += self._np.attributes["raw_tomorrow"]
-        return np_prices
+    def _all_prices(self):
+        if np_prices := self._np.attributes.get("raw_today"):
+            # For Nordpool format
+            if self._np.attributes["tomorrow_valid"]:
+                np_prices += self._np.attributes["raw_tomorrow"]
+            return np_prices
+        elif e_prices := self._np.attributes.get("prices"):  # noqa: RET505
+            # For ENTSO-e format
+            e_prices = [
+                {"start": dt_util.parse_datetime(ep["time"]), "value": ep["price"]}
+                for ep in e_prices
+            ]
+            return e_prices  # noqa: RET504
+        return []
 
     @property
     def average_attr(self):
         """Get the average price attribute."""
-        return self._np.attributes["average"]
+        if self._np is not None:
+            if "average_electricity_price" in self._np.entity_id:
+                # For ENTSO-e average
+                try:
+                    return float(self._np.state)
+                except ValueError:
+                    _LOGGER.warning(
+                        'Could not convert "%s" to float for average sensor "%s"',
+                        self._np.state,
+                        self._np.entity_id,
+                    )
+            else:
+                # For Nordpool format
+                return self._np.attributes["average"]
+        return None
 
     @property
     def current_price_attr(self):
-        """Get the curent price attribute."""
-        return self._np.attributes["current_price"]
+        """Get the current price attribute."""
+        if self._np is not None:
+            if current := self._np.attributes.get("current_price"):
+                # For Nordpool format
+                return current
+            else:  # noqa: RET505
+                # For general, find in list
+                now = dt_util.now()
+                for price in self._all_prices():
+                    if (
+                        price["start"] < now
+                        and price["start"] + dt.timedelta(hours=1) > now
+                    ):
+                        return price["value"]
+        return None
 
     def update(self, hass: HomeAssistant) -> bool:
         """Update price in storage."""
         np = hass.states.get(self._unique_id)
         if np is None:
-            _LOGGER.warning("Got empty data from Norpool entity %s ", self._unique_id)
-        elif "today" not in np.attributes:
+            _LOGGER.warning("Got empty data from Nordpool entity %s ", self._unique_id)
+        elif "today" not in np.attributes and "prices_today" not in np.attributes:
             _LOGGER.warning(
-                "No values for today in Norpool entity %s ", self._unique_id
+                "No values for today in Nordpool entity %s ", self._unique_id
             )
         else:
             _LOGGER.debug(
@@ -451,7 +545,7 @@ class NordpoolEntity:
         """
         started = False
         selected = []
-        for p in self._prices_raw:
+        for p in self._all_prices:
             if p["start"] > start - dt.timedelta(hours=1):
                 started = True
             if p["start"] > end:
