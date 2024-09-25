@@ -30,7 +30,7 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS = [Platform.BINARY_SENSOR, Platform.NUMBER]
+PLATFORMS = [Platform.BINARY_SENSOR, Platform.NUMBER, Platform.SENSOR]
 
 
 async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
@@ -97,9 +97,7 @@ class NordpoolPlanner:
         # TODO: Make dictionary?
 
         # Output entities
-        self._low_cost_binary_sensor_entity = None
-        self._high_cost_binary_sensor_entity = None
-        # TODO: Make list?
+        self._output_listners = {}
 
         # Output states
         self.low_cost_state = NordpoolPlannerState()
@@ -209,17 +207,14 @@ class NordpoolPlanner:
 
     def register_output_listner_entity(self, entity, conf_key="") -> None:
         """Register output entity."""
-        # Output binary sensors
-        if conf_key == CONF_LOW_COST_ENTITY:
-            self._low_cost_binary_sensor_entity = entity
-        elif conf_key == CONF_HIGH_COST_ENTITY:
-            self._high_cost_binary_sensor_entity = entity
-        else:
+        if self._output_listners.get(conf_key):
             _LOGGER.warning(
-                'An entity "%s" was registred for update but no match for key "%s"',
-                entity.entity_id,
+                'An output listner with key "%s" and unique id "%s" is overriding previous entity "%s"',
                 conf_key,
+                self._output_listners.get(conf_key).entity_id,
+                entity.entity_id,
             )
+        self._output_listners[conf_key] = entity
 
     def get_device_info(self) -> DeviceInfo:
         """Get device info to group entities."""
@@ -342,8 +337,8 @@ class NordpoolPlanner:
             self._np_entity.current_price_attr / prices_group.average
         )
         _LOGGER.debug("Wrote lowest cost state: %s", self.low_cost_state)
-        if self._low_cost_binary_sensor_entity:
-            self._low_cost_binary_sensor_entity.update_callback()
+        for listner in self._output_listners.values():
+            listner.update_callback()
 
     def set_highest_cost_state(self, prices_group: NordpoolPricesGroup) -> None:
         """Set the state to output variable."""
@@ -353,8 +348,8 @@ class NordpoolPlanner:
             self._np_entity.current_price_attr / prices_group.average
         )
         _LOGGER.debug("Wrote highest cost state: %s", self.high_cost_state)
-        if self._high_cost_binary_sensor_entity:
-            self._high_cost_binary_sensor_entity.update_callback()
+        for listner in self._output_listners.values():
+            listner.update_callback()
 
     def set_unavailable(self) -> None:
         """Set output state to unavailable."""
@@ -365,10 +360,8 @@ class NordpoolPlanner:
         self.high_cost_state.cost_at = STATE_UNAVAILABLE
         self.high_cost_state.now_cost_rate = STATE_UNAVAILABLE
         _LOGGER.debug("Setting output states to unavailable")
-        if self._low_cost_binary_sensor_entity:
-            self._low_cost_binary_sensor_entity.update_callback()
-        if self._high_cost_binary_sensor_entity:
-            self._high_cost_binary_sensor_entity.update_callback()
+        for listner in self._output_listners.values():
+            listner.update_callback()
 
 
 class NordpoolEntity:

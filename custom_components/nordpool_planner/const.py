@@ -10,6 +10,7 @@ CONF_TYPE_LIST = [CONF_TYPE_MOVING, CONF_TYPE_STATIC]
 CONF_NP_ENTITY = "np_entity"
 CONF_LOW_COST_ENTITY = "low_cost_entity"
 CONF_HIGH_COST_ENTITY = "high_cost_entity"
+CONF_STARTS_AT_ENTITY = "starts_at_entity"
 # CONF_DURATION = "duration"  # Keep these for future "convert from manual config"
 CONF_DURATION_ENTITY = "duration_entity"
 # CONF_ACCEPT_COST = "accept_cost"
