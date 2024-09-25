@@ -22,6 +22,7 @@ from .const import (
     CONF_NAME,
     CONF_NP_ENTITY,
     CONF_SEARCH_LENGTH_ENTITY,
+    CONF_STARTS_AT_ENTITY,
     CONF_TYPE,
     CONF_TYPE_LIST,
     CONF_TYPE_MOVING,
@@ -103,6 +104,7 @@ class NordpoolPlannerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Required(CONF_ACCEPT_COST_ENTITY, default=False): bool,
                 vol.Required(CONF_ACCEPT_RATE_ENTITY, default=False): bool,
                 vol.Required(CONF_HIGH_COST_ENTITY, default=False): bool,
+                vol.Required(CONF_STARTS_AT_ENTITY, default=False): bool,
             }
         )
 
