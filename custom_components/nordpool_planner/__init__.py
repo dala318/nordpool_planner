@@ -102,10 +102,7 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
             return False
 
         # if config_entry.minor_version < 2:
-        #     # TODO: modify Config Entry data with changes in version 1.2
-        #     pass
-        # if config_entry.minor_version < 3:
-        #     # TODO: modify Config Entry data with changes in version 1.3
+        #     # Modify Config Entry data with changes in version 1.2
         #     pass
 
         hass.config_entries.async_update_entry(
@@ -464,45 +461,58 @@ class NordpoolEntity:
         # TODO: Add more checks, make function of those in update()
         return self._np is not None
 
-    # @property
-    # def prices(self):
-    #     """Get the prices."""
-    #     np_prices = self._np.attributes["today"]
-    #     if self._np.attributes["tomorrow_valid"]:
-    #         np_prices += self._np.attributes["tomorrow"]
-    #     return np_prices
-
     @property
     def _all_prices(self):
         if np_prices := self._np.attributes.get("raw_today"):
+            # For Nordpool format
             if self._np.attributes["tomorrow_valid"]:
                 np_prices += self._np.attributes["raw_tomorrow"]
             return np_prices
         elif e_prices := self._np.attributes.get("prices"):  # noqa: RET505
+            # For ENTSO-e format
             e_prices = [
                 {"start": dt_util.parse_datetime(ep["time"]), "value": ep["price"]}
                 for ep in e_prices
             ]
-            return e_prices
+            return e_prices  # noqa: RET504
         return []
 
     @property
     def average_attr(self):
         """Get the average price attribute."""
         if self._np is not None:
-            return self._np.attributes["average"]
+            if "average_electricity_price" in self._np.entity_id:
+                # For ENTSO-e average
+                try:
+                    return float(self._np.state)
+                except ValueError:
+                    _LOGGER.warning(
+                        'Could not convert "%s" to float for average sensor "%s"',
+                        self._np.state,
+                        self._np.entity_id,
+                    )
+            else:
+                # For Nordpool format
+                return self._np.attributes["average"]
         return None
 
     @property
     def current_price_attr(self):
         """Get the current price attribute."""
         if self._np is not None:
-            return self._np.attributes["current_price"]
+            if current := self._np.attributes.get("current_price"):
+                # For Nordpool format
+                return current
+            else:  # noqa: RET505
+                # For general, find in list
+                now = dt_util.now()
+                for price in self._all_prices():
+                    if (
+                        price["start"] < now
+                        and price["start"] + dt.timedelta(hours=1) > now
+                    ):
+                        return price["value"]
         return None
-
-    # @property
-    # def price_value(self):
-    #     self._np.state
 
     def update(self, hass: HomeAssistant) -> bool:
         """Update price in storage."""
