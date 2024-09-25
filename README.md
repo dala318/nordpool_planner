@@ -33,7 +33,7 @@ During setup some preconditions and selections are needed:
 
 * Give a name to the service
 * Select type "Moving" or "Static", more about these below (only moving is properly implemented)
-* Select Nordpool prices entity from list to base states on
+* Select Nordpool prices entity from list to base states on (ENTSO-e are selectable but very untested)
 * Select which optional features you want activated, more about these below as well
 * Submit and set your configuration parameters
 
