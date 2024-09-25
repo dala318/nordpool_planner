@@ -22,4 +22,4 @@ CONF_SEARCH_LENGTH_ENTITY = "search_length_entity"
 # CONF_END_TIME = "end_time"
 CONF_END_TIME_ENTITY = "end_time_entity"
 
-CONF_CURENCY = "currency"
+CONF_CURRENCY = "currency"
