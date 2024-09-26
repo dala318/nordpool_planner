@@ -286,6 +286,7 @@ class NordpoolPlanner:
             name=self.name,
             manufacturer="Nordpool",
             entry_type=DeviceEntryType.SERVICE,
+            config_entries=[self._config],
         )
 
     def input_changed(self, value):
