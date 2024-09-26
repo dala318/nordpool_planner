@@ -3,7 +3,6 @@
 from unittest import mock
 
 from custom_components.nordpool_planner import NordpoolPlanner
-import pytest
 
 # from pytest_homeassistant_custom_component.async_mock import patch
 # from pytest_homeassistant_custom_component.common import (
@@ -12,14 +11,21 @@ import pytest
 #     mock_integration,
 #     mock_platform,
 # )
+from custom_components.nordpool_planner.const import (
+    CONF_DURATION_ENTITY,
+    CONF_NP_ENTITY,
+    CONF_SEARCH_LENGTH_ENTITY,
+    CONF_TYPE,
+    DOMAIN,
+)
+import pytest
 
-from custom_components.nordpool_planner.const import *
 from homeassistant import config_entries
+from homeassistant.const import ATTR_NAME, ATTR_UNIT_OF_MEASUREMENT
 
 # from homeassistant.components import sensor
 # from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.const import ATTR_NAME, ATTR_UNIT_OF_MEASUREMENT
 
 NAME = "My planner 1"
 TYPE = "moving"
@@ -38,11 +44,12 @@ CONF_ENTRY = config_entries.ConfigEntry(
     },
     options={ATTR_UNIT_OF_MEASUREMENT: CURRENCY},
     domain=DOMAIN,
-    version=1,
-    minor_version=2,
+    version=2,
+    minor_version=0,
     source="user",
     title="Nordpool Planner",
     unique_id="123456",
+    discovery_keys=None,
 )
 
 
