@@ -49,6 +49,7 @@ CONF_ENTRY = config_entries.ConfigEntry(
     source="user",
     title="Nordpool Planner",
     unique_id="123456",
+    discovery_keys=None,
 )
 
 
