@@ -506,7 +506,7 @@ class NordpoolEntity:
             else:  # noqa: RET505
                 # For general, find in list
                 now = dt_util.now()
-                for price in self._all_prices():
+                for price in self._all_prices:
                     if (
                         price["start"] < now
                         and price["start"] + dt.timedelta(hours=1) > now
