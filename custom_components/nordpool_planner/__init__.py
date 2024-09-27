@@ -25,7 +25,9 @@ from .const import (
     CONF_DURATION_ENTITY,
     CONF_END_TIME_ENTITY,
     CONF_NP_ENTITY,
+    CONF_REMAINING_HOURS_ENTITY,
     CONF_SEARCH_LENGTH_ENTITY,
+    CONF_START_TIME_ENTITY,
     CONF_TYPE,
     CONF_TYPE_MOVING,
     CONF_TYPE_STATIC,
@@ -146,11 +148,15 @@ class NordpoolPlanner:
         self._accept_cost_number_entity = ""
         self._accept_rate_number_entity = ""
         self._search_length_number_entity = ""
+        self._start_time_number_entity = ""
         self._end_time_number_entity = ""
         # TODO: Make dictionary?
 
         # Output entities
         self._output_listeners = {}
+
+        # Local state variables
+        self._last_update = None
 
         # Output states
         self.low_cost_state = NordpoolPlannerState()
@@ -182,6 +188,11 @@ class NordpoolPlanner:
         return self._config.data[CONF_TYPE] == CONF_TYPE_MOVING
 
     @property
+    def _is_static(self) -> bool:
+        """Get if planner is of type Static."""
+        return self._config.data[CONF_TYPE] == CONF_TYPE_STATIC
+
+    @property
     def _search_length(self) -> int:
         """Get search length parameter."""
         return self.get_number_entity_value(
@@ -189,9 +200,11 @@ class NordpoolPlanner:
         )
 
     @property
-    def _is_static(self) -> bool:
-        """Get if planner is of type Moving."""
-        return self._config.data[CONF_TYPE] == CONF_TYPE_STATIC
+    def _start_time(self) -> int:
+        """Get start time parameter."""
+        return self.get_number_entity_value(
+            self._start_time_number_entity, integer=True
+        )
 
     @property
     def _end_time(self) -> int:
@@ -252,6 +265,8 @@ class NordpoolPlanner:
             self._accept_rate_number_entity = entity_id
         elif conf_key == CONF_SEARCH_LENGTH_ENTITY:
             self._search_length_number_entity = entity_id
+        elif conf_key == CONF_START_TIME_ENTITY:
+            self._start_time_number_entity = entity_id
         elif conf_key == CONF_END_TIME_ENTITY:
             self._end_time_number_entity = entity_id
         else:
@@ -321,7 +336,7 @@ class NordpoolPlanner:
             _LOGGER.warning("Aborting update since no valid Search length")
             return
 
-        if self._is_static and not self._end_time:
+        if self._is_static and not (self._start_time and self._end_time):
             _LOGGER.warning("Aborting update since no valid end time")
             return
 
@@ -329,13 +344,33 @@ class NordpoolPlanner:
         now = dt_util.now()
         duration = dt.timedelta(hours=self._duration - 1)
 
+        # Initiate states and variables for Moving planner
         if self._is_moving:
+            start_time = now
             end_time = now + dt.timedelta(hours=self._search_length)
-        elif self._is_static:
-            end_time = now.replace(minute=0, second=0, microsecond=0)
-            if self._end_time < now.hour:
-                end_time += dt.timedelta(days=1)
 
+        # Initiate states and variables for Static planner
+        elif self._is_static:
+            start_time = now.replace(
+                hour=self._start_time, minute=0, second=0, microsecond=0
+            )
+            end_time = now.replace(
+                hour=self._end_time, minute=0, second=0, microsecond=0
+            )
+            # First ensure end is after start (spans over midnight)
+            if end_time < start_time:
+                # Have not started range yet
+                if end_time < now:
+                    end_time += dt.timedelta(days=1)
+                # Started range "yesterday"
+                else:
+                    start_time -= dt.timedelta(days=1)
+            # In active range
+            if start_time < now and end_time > now:
+                # Bump up start to now so that prices in the past is not used
+                start_time = now
+
+        # Invalid planner type
         else:
             _LOGGER.warning("Aborting update since unknown planner type")
             return
@@ -344,7 +379,7 @@ class NordpoolPlanner:
         offset = 0
         while True:
             start_offset = dt.timedelta(hours=offset)
-            first_time = now + start_offset
+            first_time = start_time + start_offset
             last_time = first_time + duration
             if offset != 0 and last_time > end_time:
                 break
@@ -358,7 +393,7 @@ class NordpoolPlanner:
         if len(prices_groups) == 0:
             _LOGGER.warning(
                 "Aborting update since no prices fetched in range %s to %s with duration %s",
-                now,
+                start_time,
                 end_time,
                 duration,
             )
@@ -367,7 +402,7 @@ class NordpoolPlanner:
         _LOGGER.debug(
             "Processing %s prices_groups found in range %s to %s",
             len(prices_groups),
-            now,
+            start_time,
             end_time,
         )
 
@@ -401,6 +436,22 @@ class NordpoolPlanner:
             if p.average > highest_cost_group.average:
                 highest_cost_group = p
         self.set_highest_cost_state(highest_cost_group)
+
+        if not self._last_update:
+            pass
+        elif self._last_update.hour < now.hour or (
+            self._last_update.hour == 23 and now.hour == 0
+        ):
+            _LOGGER.debug(
+                "Swapping hour on change from %s to %s", self._last_update, now
+            )
+            if self._is_static:
+                if self.low_cost_state.on_at(now):
+                    if counter := self._output_listeners.get(
+                        CONF_REMAINING_HOURS_ENTITY
+                    ):
+                        pass
+        self._last_update = now
 
     def set_lowest_cost_state(self, prices_group: NordpoolPricesGroup) -> None:
         """Set the state to output variable."""
@@ -612,6 +663,15 @@ class NordpoolPlannerState:
     def __str__(self) -> str:
         """Get string representation of class."""
         return f"start_at={self.starts_at} cost_at={self.cost_at:.2} now_cost_rate={self.now_cost_rate:.2}"
+
+    def on_at(self, time: dt.datetime) -> bool:
+        """Get boolean state if start is before given timestamp."""
+        if self.starts_at not in [
+            STATE_UNKNOWN,
+            STATE_UNAVAILABLE,
+        ]:
+            return self.starts_at < time
+        return False
 
 
 class NordpoolPlannerEntity(Entity):

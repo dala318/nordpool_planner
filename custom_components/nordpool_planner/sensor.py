@@ -4,15 +4,20 @@ from __future__ import annotations
 
 import logging
 
-from homeassistant.components.sensor import SensorEntity, SensorEntityDescription
+from homeassistant.components.sensor import (
+    SensorDeviceClass,
+    SensorEntity,
+    SensorEntityDescription,
+)
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
+from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN, EntityCategory
 from homeassistant.core import HomeAssistant
 
 from . import NordpoolPlanner, NordpoolPlannerEntity
 from .const import (
     CONF_HIGH_COST_ENTITY,
     CONF_LOW_COST_ENTITY,
+    CONF_REMAINING_HOURS_ENTITY,
     CONF_STARTS_AT_ENTITY,
     DOMAIN,
 )
@@ -28,12 +33,18 @@ CONF_HIGH_COST_STARTS_AT_ENTITY = (
 
 LOW_COST_START_AT_ENTITY_DESCRIPTION = SensorEntityDescription(
     key=CONF_LOW_COST_STARTS_AT_ENTITY,
-    # device_class=SensorDeviceClass.???,
+    device_class=SensorDeviceClass.TIMESTAMP,
 )
 
 HIGH_COST_START_AT_ENTITY_DESCRIPTION = SensorEntityDescription(
     key=CONF_HIGH_COST_STARTS_AT_ENTITY,
-    # device_class=SensorDeviceClass.???,
+    device_class=SensorDeviceClass.TIMESTAMP,
+)
+
+REMAINING_HOURS_ENTITY_DESCRIPTION = SensorEntityDescription(
+    key=CONF_REMAINING_HOURS_ENTITY,
+    device_class=SensorDeviceClass.DURATION,
+    entity_category=EntityCategory.DIAGNOSTIC,
 )
 
 
@@ -48,7 +59,7 @@ async def async_setup_entry(
     if config_entry.data.get(CONF_STARTS_AT_ENTITY):
         if config_entry.data.get(CONF_LOW_COST_ENTITY):
             entities.append(
-                NordpoolPlannerSensor(
+                NordpoolPlannerStartAtSensor(
                     planner,
                     entity_description=LOW_COST_START_AT_ENTITY_DESCRIPTION,
                 )
@@ -56,9 +67,17 @@ async def async_setup_entry(
 
         if config_entry.data.get(CONF_HIGH_COST_ENTITY):
             entities.append(
-                NordpoolPlannerSensor(
+                NordpoolPlannerStartAtSensor(
                     planner,
                     entity_description=HIGH_COST_START_AT_ENTITY_DESCRIPTION,
+                )
+            )
+
+        if config_entry.data.get(CONF_REMAINING_HOURS_ENTITY):
+            entities.append(
+                NordpoolPlannerRemainingTimeSensor(
+                    planner,
+                    entity_description=REMAINING_HOURS_ENTITY_DESCRIPTION,
                 )
             )
 
@@ -67,7 +86,7 @@ async def async_setup_entry(
 
 
 class NordpoolPlannerSensor(NordpoolPlannerEntity, SensorEntity):
-    """State sensor."""
+    """Generic state sensor."""
 
     _attr_icon = "mdi:flash"
 
@@ -90,6 +109,23 @@ class NordpoolPlannerSensor(NordpoolPlannerEntity, SensorEntity):
             .replace(".", "")
             .replace(" ", "_")
         )
+
+    async def async_added_to_hass(self) -> None:
+        """Load the last known state when added to hass."""
+        await super().async_added_to_hass()
+        self._planner.register_output_listener_entity(self, self.entity_description.key)
+
+    def update_callback(self) -> None:
+        """Call from planner that new data available."""
+        self.schedule_update_ha_state()
+
+    # async def async_update(self):
+    #     """Called from Home Assistant to update entity value"""
+    #     self._planner.update()
+
+
+class NordpoolPlannerStartAtSensor(NordpoolPlannerSensor):
+    """Start at specific sensor."""
 
     @property
     def native_value(self):
@@ -135,15 +171,15 @@ class NordpoolPlannerSensor(NordpoolPlannerEntity, SensorEntity):
     #     )
     #     return state_attributes
 
-    async def async_added_to_hass(self) -> None:
-        """Load the last known state when added to hass."""
-        await super().async_added_to_hass()
-        self._planner.register_output_listener_entity(self, self.entity_description.key)
 
-    def update_callback(self) -> None:
-        """Call from planner that new data available."""
-        self.schedule_update_ha_state()
+class NordpoolPlannerRemainingTimeSensor(NordpoolPlannerSensor):
+    """Start at specific sensor."""
 
-    # async def async_update(self):
-    #     """Called from Home Assistant to update entity value"""
-    #     self._planner.update()
+    @property
+    def native_value(self):
+        """Output state."""
+        state = None
+
+        # TODO: Add the logic
+
+        return state
