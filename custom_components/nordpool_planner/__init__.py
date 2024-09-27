@@ -282,11 +282,11 @@ class NordpoolPlanner:
     def get_device_info(self) -> DeviceInfo:
         """Get device info to group entities."""
         return DeviceInfo(
-            identifiers={(DOMAIN, self._config.data[CONF_TYPE])},
+            identifiers={(DOMAIN, self._config.entry_id)},
             name=self.name,
             manufacturer="Nordpool",
             entry_type=DeviceEntryType.SERVICE,
-            config_entries=[self._config],
+            model="Forecast",
         )
 
     def input_changed(self, value):
