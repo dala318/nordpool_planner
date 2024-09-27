@@ -247,16 +247,16 @@ class NordpoolPlanner:
         return self._config.data[CONF_TYPE] == CONF_TYPE_MOVING
 
     @property
+    def _is_static(self) -> bool:
+        """Get if planner is of type Static."""
+        return self._config.data[CONF_TYPE] == CONF_TYPE_STATIC
+
+    @property
     def _search_length(self) -> int:
         """Get search length parameter."""
         return self.get_number_entity_value(
             self._search_length_number_entity, integer=True
         )
-
-    @property
-    def _is_static(self) -> bool:
-        """Get if planner is of type Moving."""
-        return self._config.data[CONF_TYPE] == CONF_TYPE_STATIC
 
     @property
     def _end_time(self) -> int:
@@ -402,10 +402,11 @@ class NordpoolPlanner:
         if self._is_moving:
             end_time = now + dt.timedelta(hours=self._search_length)
         elif self._is_static:
-            end_time = now.replace(minute=0, second=0, microsecond=0)
+            end_time = now.replace(
+                hour=self._end_time, minute=0, second=0, microsecond=0
+            )
             if self._end_time < now.hour:
                 end_time += dt.timedelta(days=1)
-
         else:
             _LOGGER.warning("Aborting update since unknown planner type")
             return
