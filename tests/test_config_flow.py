@@ -13,7 +13,7 @@ from homeassistant import config_entries
 from homeassistant.const import ATTR_NAME, ATTR_UNIT_OF_MEASUREMENT
 from homeassistant.helpers import selector
 
-NP_ENTITY_NAME = "sensor.nordpool_ent"
+PRICES_ENTITY_NAME = "sensor.nordpool_ent"
 
 SCHEMA_COPY = vol.Schema(
     {
@@ -21,8 +21,8 @@ SCHEMA_COPY = vol.Schema(
         vol.Required(CONF_TYPE): selector.SelectSelector(
             selector.SelectSelectorConfig(options=CONF_TYPE_LIST),
         ),
-        vol.Required(CONF_NP_ENTITY): selector.SelectSelector(
-            selector.SelectSelectorConfig(options=[NP_ENTITY_NAME]),
+        vol.Required(CONF_PRICES_ENTITY): selector.SelectSelector(
+            selector.SelectSelectorConfig(options=[PRICES_ENTITY_NAME]),
         ),
         vol.Required(CONF_ACCEPT_COST_ENTITY, default=False): bool,
         vol.Required(CONF_ACCEPT_RATE_ENTITY, default=False): bool,

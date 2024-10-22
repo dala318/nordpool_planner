@@ -13,7 +13,7 @@ from custom_components.nordpool_planner import NordpoolPlanner
 # )
 from custom_components.nordpool_planner.const import (
     CONF_DURATION_ENTITY,
-    CONF_NP_ENTITY,
+    CONF_PRICES_ENTITY,
     CONF_SEARCH_LENGTH_ENTITY,
     CONF_TYPE,
     DOMAIN,
@@ -31,14 +31,14 @@ NAME = "My planner 1"
 TYPE = "moving"
 DURATION_ENT = "duration_ent"
 SEARCH_LENGTH_ENT = "search_len"
-NP_ENT = "sensor.np_ent"
+PRICES_ENT = "sensor.np_ent"
 CURRENCY = "EUR/kWh"
 
 CONF_ENTRY = config_entries.ConfigEntry(
     data={
         ATTR_NAME: NAME,
         CONF_TYPE: TYPE,
-        CONF_NP_ENTITY: NP_ENT,
+        CONF_PRICES_ENTITY: PRICES_ENT,
         CONF_DURATION_ENTITY: DURATION_ENT,
         CONF_SEARCH_LENGTH_ENTITY: SEARCH_LENGTH_ENT,
     },

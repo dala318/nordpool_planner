@@ -6,7 +6,7 @@
                 "data": {
                     "name": "Name of planner",
                     "type": "Planner type",
-                    "np_entity": "Nordpool entity",
+                    "prices_entity": "Nordpool or ENTSO-e entity",
                     "duration_entity": "Duration: Creates dynamic configuration parameter",
                     "search_length_entity": "Search length: Creates dynamic configuration parameter",
                     "end_time_entity": "End time: Creates dynamic configuration parameter",

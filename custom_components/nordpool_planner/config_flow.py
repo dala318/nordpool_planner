@@ -19,7 +19,7 @@ from .const import (
     CONF_END_TIME_ENTITY,
     CONF_HIGH_COST_ENTITY,
     CONF_LOW_COST_ENTITY,
-    CONF_NP_ENTITY,
+    CONF_PRICES_ENTITY,
     CONF_SEARCH_LENGTH_ENTITY,
     CONF_STARTS_AT_ENTITY,
     CONF_TYPE,
@@ -36,7 +36,7 @@ class NordpoolPlannerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Nordpool Planner config flow."""
 
     VERSION = 2
-    MINOR_VERSION = 0
+    MINOR_VERSION = 1
     data = None
     options = None
     _reauth_entry: config_entries.ConfigEntry | None = None
@@ -58,7 +58,7 @@ class NordpoolPlannerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 self.data[CONF_END_TIME_ENTITY] = True
 
             self.options = {}
-            np_entity = self.hass.states.get(self.data[CONF_NP_ENTITY])
+            np_entity = self.hass.states.get(self.data[CONF_PRICES_ENTITY])
             try:
                 self.options[ATTR_UNIT_OF_MEASUREMENT] = np_entity.attributes.get(
                     ATTR_UNIT_OF_MEASUREMENT
@@ -69,7 +69,7 @@ class NordpoolPlannerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             await self.async_set_unique_id(
                 self.data[ATTR_NAME]
                 + "_"
-                + self.data[CONF_NP_ENTITY]
+                + self.data[CONF_PRICES_ENTITY]
                 + "_"
                 + self.data[CONF_TYPE]
             )
@@ -88,7 +88,7 @@ class NordpoolPlannerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         selected_entities = [
             s
             for s in sensor_entities
-            if "nordpool" in s or "average_electricity_price_today" in s
+            if "nordpool" in s or "average_electricity_price" in s
         ]
 
         if len(selected_entities) == 0:
@@ -100,7 +100,7 @@ class NordpoolPlannerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Required(CONF_TYPE): selector.SelectSelector(
                     selector.SelectSelectorConfig(options=CONF_TYPE_LIST),
                 ),
-                vol.Required(CONF_NP_ENTITY): selector.SelectSelector(
+                vol.Required(CONF_PRICES_ENTITY): selector.SelectSelector(
                     selector.SelectSelectorConfig(options=selected_entities),
                 ),
                 vol.Required(CONF_ACCEPT_COST_ENTITY, default=False): bool,
@@ -112,7 +112,7 @@ class NordpoolPlannerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         placeholders = {
             CONF_TYPE: CONF_TYPE_LIST,
-            CONF_NP_ENTITY: selected_entities,
+            CONF_PRICES_ENTITY: selected_entities,
         }
 
         return self.async_show_form(
