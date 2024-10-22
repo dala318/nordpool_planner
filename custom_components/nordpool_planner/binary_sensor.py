@@ -86,7 +86,7 @@ class NordpoolPlannerBinarySensor(NordpoolPlannerEntity, BinarySensorEntity):
     @property
     def is_on(self):
         """Output state."""
-        state = STATE_UNKNOWN
+        state = None
         # TODO: This can be made nicer to get value from states in dictionary in planner
         if self.entity_description.key == CONF_LOW_COST_ENTITY:
             if self._planner.low_cost_state.starts_at not in [
