@@ -6,3 +6,4 @@ www/
 __pycache__
 home-assistant*
 /*.yaml
+.coverage
