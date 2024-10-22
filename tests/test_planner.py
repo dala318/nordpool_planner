@@ -13,7 +13,7 @@ from custom_components.nordpool_planner import NordpoolPlanner
 # )
 from custom_components.nordpool_planner.const import (
     CONF_DURATION_ENTITY,
-    CONF_NP_ENTITY,
+    CONF_PRICES_ENTITY,
     CONF_SEARCH_LENGTH_ENTITY,
     CONF_TYPE,
     DOMAIN,

@@ -1,10 +1,10 @@
 {
   "domain": "nordpool_planner",
   "name": "Nordpool Planner",
+  "after_dependencies": ["nordpool", "entsoe"],
   "codeowners": ["@dala318"],
   "config_flow": true,
   "dependencies": [],
-  "after_dependencies": ["nordpool", "entsoe"],
   "documentation": "https://github.com/dala318/nordpool_planner",
   "iot_class": "calculated",
   "issue_tracker": "https://github.com/dala318/nordpool_planner/issues",
