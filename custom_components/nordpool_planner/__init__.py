@@ -19,7 +19,6 @@ from homeassistant.helpers.event import (
     async_track_state_change_event,
     async_track_time_change,
 )
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import dt as dt_util
 
 from .config_flow import NordpoolPlannerConfigFlow
@@ -49,7 +48,9 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         hass.data[DOMAIN] = {}
 
     if config_entry.entry_id not in hass.data[DOMAIN]:
-        hass.data[DOMAIN][config_entry.entry_id] = NordpoolPlanner(hass, config_entry)
+        planner = NordpoolPlanner(hass, config_entry)
+        await planner.async_setup()
+        hass.data[DOMAIN][config_entry.entry_id] = planner
 
     if config_entry is not None:
         if config_entry.source == SOURCE_IMPORT:
@@ -137,8 +138,10 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
     return True
 
 
-class NordpoolPlanner(DataUpdateCoordinator):
+class NordpoolPlanner:
     """Planner base class."""
+
+    _hourly_update = None
 
     def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry) -> None:
         """Initialize my coordinator."""
@@ -148,6 +151,7 @@ class NordpoolPlanner(DataUpdateCoordinator):
 
         # Input entities
         self._prices_entity = PricesEntity(self._config.data[CONF_PRICES_ENTITY])
+        # TODO: Remove, likely not needed anymore as async_track_time_change in async_setup() will ensure update every hour
         # self._state_change_listeners.append(
         #     async_track_state_change_event(
         #         self._hass,
@@ -155,11 +159,6 @@ class NordpoolPlanner(DataUpdateCoordinator):
         #         self._async_input_changed,
         #     )
         # )
-
-        # Ensure an update is done on every hour
-        self._hourly_update = async_track_time_change(
-            hass, self.scheduled_update, minute=0, second=0
-        )
 
         # Configuration entities
         self._duration_number_entity = ""
@@ -175,6 +174,13 @@ class NordpoolPlanner(DataUpdateCoordinator):
         # Output states
         self.low_cost_state = NordpoolPlannerState()
         self.high_cost_state = NordpoolPlannerState()
+
+    async def async_setup(self):
+        """Post initialization setup."""
+        # Ensure an update is done on every hour
+        self._hourly_update = async_track_time_change(
+            self._hass, self.scheduled_update, minute=0, second=0
+        )
 
     @property
     def name(self) -> str:
