@@ -15,7 +15,11 @@ from homeassistant.const import (
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.event import async_track_state_change_event
+from homeassistant.helpers.event import (
+    async_track_state_change_event,
+    async_track_time_change,
+)
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import dt as dt_util
 
 from .config_flow import NordpoolPlannerConfigFlow
@@ -122,7 +126,7 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
     return True
 
 
-class NordpoolPlanner:
+class NordpoolPlanner(DataUpdateCoordinator):
     """Planner base class."""
 
     def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry) -> None:
@@ -139,6 +143,11 @@ class NordpoolPlanner:
                 [self._np_entity.unique_id],
                 self._async_input_changed,
             )
+        )
+
+        # Ensure an update is done on every hour
+        self._hourly_update = async_track_time_change(
+            hass, self.scheduled_update, minute=4, second=0
         )
 
         # Configuration entities
@@ -288,6 +297,11 @@ class NordpoolPlanner:
             entry_type=DeviceEntryType.SERVICE,
             model="Forecast",
         )
+
+    def scheduled_update(self, _):
+        """Scheduled updates callback."""
+        _LOGGER.debug("Scheduled callback")
+        self.update()
 
     def input_changed(self, value):
         """Input entity callback to initiate a planner update."""
