@@ -28,7 +28,7 @@ from .const import (
     CONF_ACCEPT_RATE_ENTITY,
     CONF_DURATION_ENTITY,
     CONF_END_TIME_ENTITY,
-    CONF_NP_ENTITY,
+    CONF_PRICES_ENTITY,
     CONF_SEARCH_LENGTH_ENTITY,
     CONF_TYPE,
     CONF_TYPE_MOVING,
@@ -95,7 +95,7 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
         new_data = {**config_entry.data}
         new_options = {**config_entry.options}
 
-        np_entity = hass.states.get(new_data[CONF_NP_ENTITY])
+        np_entity = hass.states.get(new_data[CONF_PRICES_ENTITY])
         try:
             uom = np_entity.attributes.get(ATTR_UNIT_OF_MEASUREMENT)
             new_options.pop("currency")
@@ -105,16 +105,27 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
             _LOGGER.warning("Could not extract currency from Nordpool entity")
             return False
 
-        # if config_entry.minor_version < 2:
-        #     # Modify Config Entry data with changes in version 1.2
-        #     pass
+        hass.config_entries.async_update_entry(
+            config_entry,
+            data=new_data,
+            options=new_options,
+            version=installed_version,
+            minor_version=installed_minor_version,
+        )
+
+    if config_entry.version == 2 and config_entry.minor_version == 0:
+        new_data = {**config_entry.data}
+        new_options = {**config_entry.options}
+
+        entity_id = new_data.pop("np_entity")
+        new_data[CONF_PRICES_ENTITY] = entity_id
 
         hass.config_entries.async_update_entry(
             config_entry,
             data=new_data,
             options=new_options,
-            minor_version=installed_minor_version,
             version=installed_version,
+            minor_version=installed_minor_version,
         )
 
     _LOGGER.debug(
@@ -136,18 +147,18 @@ class NordpoolPlanner(DataUpdateCoordinator):
         self._state_change_listeners = []
 
         # Input entities
-        self._np_entity = NordpoolEntity(self._config.data[CONF_NP_ENTITY])
-        self._state_change_listeners.append(
-            async_track_state_change_event(
-                self._hass,
-                [self._np_entity.unique_id],
-                self._async_input_changed,
-            )
-        )
+        self._prices_entity = PricesEntity(self._config.data[CONF_PRICES_ENTITY])
+        # self._state_change_listeners.append(
+        #     async_track_state_change_event(
+        #         self._hass,
+        #         [self._prices_entity.unique_id],
+        #         self._async_input_changed,
+        #     )
+        # )
 
         # Ensure an update is done on every hour
         self._hourly_update = async_track_time_change(
-            hass, self.scheduled_update, minute=4, second=0
+            hass, self.scheduled_update, minute=0, second=0
         )
 
         # Configuration entities
@@ -173,12 +184,12 @@ class NordpoolPlanner(DataUpdateCoordinator):
     @property
     def price_sensor_id(self) -> str:
         """Entity id of source sensor."""
-        return self._np_entity.unique_id
+        return self._prices_entity.unique_id
 
     @property
     def price_now(self) -> str:
         """Current price from source sensor."""
-        return self._np_entity.current_price_attr
+        return self._prices_entity.current_price_attr
 
     @property
     def _duration(self) -> int:
@@ -319,11 +330,11 @@ class NordpoolPlanner(DataUpdateCoordinator):
         _LOGGER.debug("Updating planner")
 
         # Update inputs
-        if not self._np_entity.update(self._hass):
+        if not self._prices_entity.update(self._hass):
             self.set_unavailable()
             return
 
-        if not self._np_entity.valid:
+        if not self._prices_entity.valid:
             _LOGGER.warning("Aborting update since no valid Nordpool data")
             return
 
@@ -363,7 +374,7 @@ class NordpoolPlanner(DataUpdateCoordinator):
             if offset != 0 and last_time > end_time:
                 break
             offset += 1
-            prices_group = self._np_entity.get_prices_group(first_time, last_time)
+            prices_group = self._prices_entity.get_prices_group(first_time, last_time)
             if not prices_group.valid:
                 continue
                 # TODO: Should not end up here, why?
@@ -394,14 +405,14 @@ class NordpoolPlanner(DataUpdateCoordinator):
                 self.set_lowest_cost_state(p)
                 break
             if accept_rate:
-                if self._np_entity.average_attr == 0:
+                if self._prices_entity.average_attr == 0:
                     if p.average <= 0 and accept_rate <= 0:
                         _LOGGER.debug(
                             "Accept rate indirectly fulfilled (NP average 0 but cost and accept rate <= 0)"
                         )
                         self.set_lowest_cost_state(p)
                         break
-                elif (p.average / self._np_entity.average_attr) < accept_rate:
+                elif (p.average / self._prices_entity.average_attr) < accept_rate:
                     _LOGGER.debug("Accept rate fulfilled")
                     self.set_lowest_cost_state(p)
                     break
@@ -422,7 +433,7 @@ class NordpoolPlanner(DataUpdateCoordinator):
         self.low_cost_state.cost_at = prices_group.average
         if prices_group.average != 0:
             self.low_cost_state.now_cost_rate = (
-                self._np_entity.current_price_attr / prices_group.average
+                self._prices_entity.current_price_attr / prices_group.average
             )
         else:
             self.low_cost_state.now_cost_rate = STATE_UNAVAILABLE
@@ -436,7 +447,7 @@ class NordpoolPlanner(DataUpdateCoordinator):
         self.high_cost_state.cost_at = prices_group.average
         if prices_group.average != 0:
             self.high_cost_state.now_cost_rate = (
-                self._np_entity.current_price_attr / prices_group.average
+                self._prices_entity.current_price_attr / prices_group.average
             )
         else:
             self.low_cost_state.now_cost_rate = STATE_UNAVAILABLE
@@ -457,7 +468,7 @@ class NordpoolPlanner(DataUpdateCoordinator):
             listener.update_callback()
 
 
-class NordpoolEntity:
+class PricesEntity:
     """Representation for Nordpool state."""
 
     def __init__(self, unique_id: str) -> None:
