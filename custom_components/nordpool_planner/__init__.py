@@ -12,7 +12,7 @@ from homeassistant.const import (
     STATE_UNKNOWN,
     Platform,
 )
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, HomeAssistantError
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.event import (
@@ -81,60 +81,91 @@ async def async_reload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> 
 async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
     """Migrate old entry."""
     _LOGGER.debug(
-        "Migrating configuration from version %s.%s",
+        "Attempting migrating configuration from version %s.%s",
         config_entry.version,
         config_entry.minor_version,
     )
+
+    class MigrateError(HomeAssistantError):
+        """Error to indicate there is was an error in version migration."""
+
     installed_version = NordpoolPlannerConfigFlow.VERSION
     installed_minor_version = NordpoolPlannerConfigFlow.MINOR_VERSION
 
+    new_data = {**config_entry.data}
+    new_options = {**config_entry.options}
+
     if config_entry.version > installed_version:
-        # Downgraded from a future version
+        _LOGGER.warning(
+            "Downgrading major version from %s to %s is not allowed",
+            config_entry.version,
+            installed_version,
+        )
         return False
 
-    if config_entry.version == 1:
-        new_data = {**config_entry.data}
-        new_options = {**config_entry.options}
+    if (
+        config_entry.version == installed_version
+        and config_entry.minor_version > installed_minor_version
+    ):
+        _LOGGER.warning(
+            "Downgrading minor version from %s.%s to %s.%s is not allowed",
+            config_entry.version,
+            config_entry.minor_version,
+            installed_version,
+            installed_minor_version,
+        )
+        return False
 
-        np_entity = hass.states.get(new_data[CONF_PRICES_ENTITY])
+    def options_1x_to_20(options: dict, data: dict, hass: HomeAssistant):
         try:
+            np_entity = hass.states.get(data[CONF_PRICES_ENTITY])
             uom = np_entity.attributes.get(ATTR_UNIT_OF_MEASUREMENT)
-            new_options.pop("currency")
-            new_options[ATTR_UNIT_OF_MEASUREMENT] = uom
+            options.pop("currency")
+            options[ATTR_UNIT_OF_MEASUREMENT] = uom
+        except (IndexError, KeyError) as err:
+            _LOGGER.warning("Could not extract currency from Prices entity")
+            raise MigrateError from err
+        return options
 
-        except (IndexError, KeyError):
-            _LOGGER.warning("Could not extract currency from Nordpool entity")
+    def data_20_to_21(data: dict):
+        if entity_id := data.pop("np_entity"):
+            data[CONF_PRICES_ENTITY] = entity_id
+            return data
+        _LOGGER.warning('Could not find "np_entity" in config_entry')
+        raise MigrateError('Could not find "np_entity" in config_entry')
+
+    if config_entry.version == 1:
+        try:
+            # Version 1.x to 2.0
+            new_options = options_1x_to_20(new_options, new_data, hass)
+            # Version 2.0 to 2.1
+            new_data = data_20_to_21(new_data)
+        except MigrateError:
+            _LOGGER.warning("Error while upgrading from version 1.x to 2.1")
             return False
 
-        hass.config_entries.async_update_entry(
-            config_entry,
-            data=new_data,
-            options=new_options,
-            version=installed_version,
-            minor_version=installed_minor_version,
-        )
-
     if config_entry.version == 2 and config_entry.minor_version == 0:
-        new_data = {**config_entry.data}
-        new_options = {**config_entry.options}
+        try:
+            # Version 2.0 to 2.1
+            new_data = data_20_to_21(new_data)
+        except MigrateError:
+            _LOGGER.warning("Error while upgrading from version 2.0 to 2.1")
+            return False
 
-        entity_id = new_data.pop("np_entity")
-        new_data[CONF_PRICES_ENTITY] = entity_id
-
-        hass.config_entries.async_update_entry(
-            config_entry,
-            data=new_data,
-            options=new_options,
-            version=installed_version,
-            minor_version=installed_minor_version,
-        )
-
-    _LOGGER.debug(
-        "Migration to configuration version %s.%s successful",
+    hass.config_entries.async_update_entry(
+        config_entry,
+        data=new_data,
+        options=new_options,
+        version=installed_version,
+        minor_version=installed_minor_version,
+    )
+    _LOGGER.info(
+        "Migration configuration from version %s.%s to %s.%s successful",
         config_entry.version,
         config_entry.minor_version,
+        installed_version,
+        installed_minor_version,
     )
-
     return True
 
 
