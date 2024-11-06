@@ -206,6 +206,14 @@ class NordpoolPlanner:
         self.low_cost_state = NordpoolPlannerState()
         self.high_cost_state = NordpoolPlannerState()
 
+    def as_dict(self):
+        """For diagnostics serialization."""
+        res = self.__dict__.copy()
+        for k, i in res.copy().items():
+            if "_number_entity" in k:
+                res[k] = {"id": i, "value": self.get_number_entity_value(i)}
+        return res
+
     async def async_setup(self):
         """Post initialization setup."""
         # Ensure an update is done on every hour
@@ -513,6 +521,10 @@ class PricesEntity:
         self._unique_id = unique_id
         self._np = None
 
+    def as_dict(self):
+        """For diagnostics serialization."""
+        return self.__dict__
+
     @property
     def unique_id(self) -> str:
         """Get the unique id."""
@@ -675,6 +687,10 @@ class NordpoolPlannerState:
         """Get string representation of class."""
         return f"start_at={self.starts_at} cost_at={self.cost_at:.2} now_cost_rate={self.now_cost_rate:.2}"
 
+    def as_dict(self):
+        """For diagnostics serialization."""
+        return self.__dict__
+
 
 class NordpoolPlannerEntity(Entity):
     """Base class for nordpool planner entities."""
@@ -687,6 +703,17 @@ class NordpoolPlannerEntity(Entity):
         # Input configs
         self._planner = planner
         self._attr_device_info = planner.get_device_info()
+
+    def as_dict(self):
+        """For diagnostics serialization."""
+        return {
+            k: v
+            for k, v in self.__dict__.items()
+            if not (
+                k.startswith("_")
+                or k in ["hass", "platform", "registry_entry", "device_entry"]
+            )
+        }
 
     @property
     def should_poll(self):
