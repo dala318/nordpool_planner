@@ -62,9 +62,9 @@ action:
       entity_id: !input climate
       temperature: >-
         {% set set_temp = states(base_temp) | float(default=0) %}
-        {% if states(sensor_low) %}
+        {% if is_state(sensor_low, "on") %}
             {% set set_temp = set_temp + states(offset_temp) | float(default=0) %}
-        {% elif states(sensor_high) %}
+        {% elif is_state(sensor_high, "on") %}
             {% set set_temp = set_temp - states(offset_temp) | float(default=0) %}
         {% endif %}
         {{ set_temp }}
