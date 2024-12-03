@@ -100,6 +100,18 @@ Apart from the true/false if now is the time to turn on electricity usage the se
 
 `now_cost_rate` tell a comparison current price / best average. Is just a comparison to how much more expensive the electricity is right now compared to the found slot. E.g. 2 means you could half the cost by waiting for the found slot. It will turn UNAVAILABLE if best average is zero
 
+## Automation blueprints
+
+### Based on input numbers
+
+First make sure to create two input number entities for `base temperature` and `offset`
+
+Import this blueprint and choose your newly created input numbers, the nordpool_planner low & high cost states, and the climate entity you want to control.
+
+[![Then, use this blueprint.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fdala318%2Fnordpool_planner%2Fblob%2Fmaster%2Fblueprints%2Fautomation%2Fthermostat.yaml)
+
+Now, whenever the price goes up or down, Nordpool Planner will change the temperature based on the price.
+
 ## Usage
 
 Some words should be said about the usage and how it behaves.
