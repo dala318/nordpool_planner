@@ -1,5 +1,5 @@
 blueprint:
-  name: Nordpool Planner - Control Climate
+  name: Nordpool Planner - Control Climate (input number)
   description: >-
     Control a climate entity with Nordpool Planner (https://github.com/dala318/nordpool_planner)
     and an input number as a base temperature.
