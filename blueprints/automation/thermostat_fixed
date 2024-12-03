@@ -1,0 +1,78 @@
+blueprint:
+  name: Nordpool Planner - Control Climate
+  description: >-
+    Control a climate entity with Nordpool Planner (https://github.com/dala318/nordpool_planner)
+    and an input number as a base temperature.
+    The climate target temperature will update whenever input number is changed, or Nordpool Planner updates.
+  domain: automation
+  input:
+    binary_sensor_low:
+      name: Low-cost state
+      description: Nordpool Planner Low cost binary_sensor
+      selector:
+        entity:
+          integration: nordpool_planner
+          domain: binary_sensor
+    binary_sensor_high:
+      name: High-cost state
+      description: Nordpool Planner High cost binary_sensor
+      selector:
+        entity:
+          integration: nordpool_planner
+          domain: binary_sensor
+    base_temp:
+      name: Base Setpoint Temperature
+      description: Input Number Helper for base setpoint temperature
+      selector:
+        number:
+          min: 15.0
+          max: 35.0
+          step: 0.5
+          unit_of_measurement: celcius
+          mode: slider
+      default: 20
+    offset_temp:
+      name: Offset Temperature
+      description: Input Number Helper for adjusting temperature
+      selector:
+        number:
+          min: 0.5
+          max: 10.0
+          step: 0.5
+          unit_of_measurement: celcius
+          mode: slider
+      default: 1
+    climate:
+      name: Climate
+      description: Climate Entity to control
+      selector:
+        entity:
+          domain: climate
+  source_url: https://github.com/dala318/nordpool_planner/blob/master/blueprints/automation/thermostat_fixed.yaml
+mode: restart
+max_exceeded: silent
+trigger:
+  - platform: homeassistant
+    event: start
+  - platform: state
+    entity_id:
+      - !input binary_sensor_low
+      - !input binary_sensor_high
+action:
+  - variables:
+      sensor_low: !input binary_sensor_low
+      sensor_high: !input binary_sensor_high
+      base_temp: !input base_temp
+      offset_temp: !input offset_temp
+      climate: !input climate
+  - service: climate.set_temperature
+    data_template:
+      entity_id: !input climate
+      temperature: >-
+        {% set set_temp = base_temp | float(default=0) %}
+        {% if is_state(sensor_low, "on") %}
+            {% set set_temp = set_temp + offset_temp | float(default=0) %}
+        {% elif is_state(sensor_high, "on") %}
+            {% set set_temp = set_temp - offset_temp | float(default=0) %}
+        {% endif %}
+        {{ set_temp }}
