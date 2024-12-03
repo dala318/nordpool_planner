@@ -1,0 +1,70 @@
+blueprint:
+  name: Nordpool Planner - Control Climate (input number)
+  description: >-
+    Control a climate entity with Nordpool Planner (https://github.com/dala318/nordpool_planner)
+    and an input number as a base temperature.
+    The climate target temperature will update whenever input number is changed, or Nordpool Planner updates.
+  domain: automation
+  input:
+    binary_sensor_low:
+      name: Low-cost state
+      description: Nordpool Planner Low cost binary_sensor
+      selector:
+        entity:
+          integration: nordpool_planner
+          domain: binary_sensor
+    binary_sensor_high:
+      name: High-cost state
+      description: Nordpool Planner High cost binary_sensor
+      selector:
+        entity:
+          integration: nordpool_planner
+          domain: binary_sensor
+    base_temp:
+      name: Base Setpoint Temperature
+      description: Input Number Helper for base setpoint temperature
+      selector:
+        entity:
+          domain: input_number
+    offset_temp:
+      name: Offset Temperature
+      description: Input Number Helper for adjusting temperature
+      selector:
+        entity:
+          domain: input_number
+    climate:
+      name: Climate
+      description: Climate Entity to control
+      selector:
+        entity:
+          domain: climate
+  source_url: https://github.com/dala318/nordpool_planner/blob/master/blueprints/automation/thermostat_number.yaml
+mode: restart
+max_exceeded: silent
+trigger:
+  - platform: homeassistant
+    event: start
+  - platform: state
+    entity_id:
+      - !input binary_sensor_low
+      - !input binary_sensor_high
+      - !input base_temp
+      - !input offset_temp
+action:
+  - variables:
+      sensor_low: !input binary_sensor_low
+      sensor_high: !input binary_sensor_high
+      base_temp: !input base_temp
+      offset_temp: !input offset_temp
+      climate: !input climate
+  - service: climate.set_temperature
+    data_template:
+      entity_id: !input climate
+      temperature: >-
+        {% set set_temp = states(base_temp) | float(default=0) %}
+        {% if is_state(sensor_low, "on") %}
+            {% set set_temp = set_temp + states(offset_temp) | float(default=0) %}
+        {% elif is_state(sensor_high, "on") %}
+            {% set set_temp = set_temp - states(offset_temp) | float(default=0) %}
+        {% endif %}
+        {{ set_temp }}
