@@ -38,7 +38,7 @@ blueprint:
       selector:
         entity:
           domain: climate
-  source_url: https://github.com/dala318/nordpool_planner/blob/master/blueprints/automation/thermostat.yaml
+  source_url: https://github.com/dala318/nordpool_planner/blob/master/blueprints/automation/thermostat_number.yaml
 mode: restart
 max_exceeded: silent
 trigger:
