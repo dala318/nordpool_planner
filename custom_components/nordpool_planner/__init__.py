@@ -207,6 +207,7 @@ class NordpoolPlanner:
 
         # Local state variables
         self._last_update = None
+        self.low_hours = None
 
         # Output states
         self.low_cost_state = NordpoolPlannerState()
@@ -515,10 +516,12 @@ class NordpoolPlanner:
             )
             if self._is_static:
                 if self.low_cost_state.on_at(now):
-                    if counter := self._output_listeners.get(
-                        CONF_REMAINING_HOURS_ENTITY
-                    ):
-                        pass
+                    if self.low_hours is None:
+                        self.low_hours = 1
+                    else:
+                        self.low_hours += 1
+                if end_time.hour == now.hour:
+                    self.low_hours = 0
         self._last_update = now
 
     def set_lowest_cost_state(self, prices_group: NordpoolPricesGroup) -> None:
