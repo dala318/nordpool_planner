@@ -178,24 +178,16 @@ class NordpoolPlannerRemainingTimeSensor(NordpoolPlannerSensor, RestoreSensor):
         await super().async_added_to_hass()
         if (
             (last_state := await self.async_get_last_state()) is not None
-            and (extra_data := await self.async_get_last_sensor_data()) is not None
             and last_state.state not in (STATE_UNKNOWN, STATE_UNAVAILABLE)
-            # The trigger might have fired already while we waited for stored data,
-            # then we should not restore state
-            
-            # and CONF_STATE not in self._rendered
+            # and (extra_data := await self.async_get_last_sensor_data()) is not None
         ):
-            # self._rendered[CONF_STATE] = extra_data.native_value
-            self.restore_attributes(last_state)
-
-            # ToDo: Call planner and set value there!
+            self._planner.low_hours = last_state.state
+        else:
+            # self._planner.low_hours = 0
+            pass
 
 
     @property
     def native_value(self):
         """Output state."""
-        state = None
-
-        # TODO: Add the logic
-
-        return state
+        return self._planner.low_hours
