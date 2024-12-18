@@ -8,9 +8,15 @@ from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
+    RestoreSensor,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN, EntityCategory
+from homeassistant.const import (
+    CONF_STATE,
+    STATE_UNAVAILABLE,
+    STATE_UNKNOWN,
+    EntityCategory,
+)
 from homeassistant.core import HomeAssistant
 
 from . import NordpoolPlanner, NordpoolPlannerEntity
@@ -164,8 +170,26 @@ class NordpoolPlannerStartAtSensor(NordpoolPlannerSensor):
     #     return state_attributes
 
 
-class NordpoolPlannerRemainingTimeSensor(NordpoolPlannerSensor):
+class NordpoolPlannerRemainingTimeSensor(NordpoolPlannerSensor, RestoreSensor):
     """Start at specific sensor."""
+
+    async def async_added_to_hass(self) -> None:
+        """Restore last state."""
+        await super().async_added_to_hass()
+        if (
+            (last_state := await self.async_get_last_state()) is not None
+            and (extra_data := await self.async_get_last_sensor_data()) is not None
+            and last_state.state not in (STATE_UNKNOWN, STATE_UNAVAILABLE)
+            # The trigger might have fired already while we waited for stored data,
+            # then we should not restore state
+            
+            # and CONF_STATE not in self._rendered
+        ):
+            # self._rendered[CONF_STATE] = extra_data.native_value
+            self.restore_attributes(last_state)
+
+            # ToDo: Call planner and set value there!
+
 
     @property
     def native_value(self):
