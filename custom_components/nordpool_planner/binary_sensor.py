@@ -148,10 +148,6 @@ class NordpoolPlannerBinarySensor(NordpoolPlannerEntity, BinarySensorEntity):
         await super().async_added_to_hass()
         self._planner.register_output_listener_entity(self, self.entity_description.key)
 
-    def update_callback(self) -> None:
-        """Call from planner that new data available."""
-        self.schedule_update_ha_state()
-
     # async def async_update(self):
     #     """Called from Home Assistant to update entity value"""
     #     self._planner.update()

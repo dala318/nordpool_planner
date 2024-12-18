@@ -203,7 +203,7 @@ class NordpoolPlanner:
         # TODO: Make dictionary?
 
         # Output entities
-        self._output_listeners = {}
+        self._output_listeners = dict[str, NordpoolPlannerEntity]
 
         # Local state variables
         self._last_update = None
@@ -348,7 +348,7 @@ class NordpoolPlanner:
             )
         )
 
-    def register_output_listener_entity(self, entity, conf_key="") -> None:
+    def register_output_listener_entity(self, entity: NordpoolPlannerEntity, conf_key="") -> None:
         """Register output entity."""
         if self._output_listeners.get(conf_key):
             _LOGGER.warning(
@@ -509,9 +509,7 @@ class NordpoolPlanner:
 
         if not self._last_update:
             pass
-        elif self._last_update.hour < now.hour or (
-            self._last_update.hour == 23 and now.hour == 0
-        ):
+        elif self._last_update.hour != now.hour:
             _LOGGER.debug(
                 "Swapping hour on change from %s to %s", self._last_update, now
             )
@@ -779,3 +777,7 @@ class NordpoolPlannerEntity(Entity):
     def should_poll(self):
         """No need to poll. Coordinator notifies entity of updates."""
         return False
+
+    def update_callback(self) -> None:
+        """Call from planner that new data available."""
+        self.schedule_update_ha_state()
