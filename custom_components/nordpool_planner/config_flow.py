@@ -38,7 +38,7 @@ class NordpoolPlannerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Nordpool Planner config flow."""
 
     VERSION = 2
-    MINOR_VERSION = 1
+    MINOR_VERSION = 2
     data = None
     options = None
     _reauth_entry: config_entries.ConfigEntry | None = None
