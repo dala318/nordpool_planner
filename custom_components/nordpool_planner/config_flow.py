@@ -20,7 +20,6 @@ from .const import (
     CONF_HIGH_COST_ENTITY,
     CONF_LOW_COST_ENTITY,
     CONF_PRICES_ENTITY,
-    CONF_REMAINING_HOURS_ENTITY,
     CONF_SEARCH_LENGTH_ENTITY,
     CONF_START_TIME_ENTITY,
     CONF_STARTS_AT_ENTITY,
@@ -28,6 +27,7 @@ from .const import (
     CONF_TYPE_LIST,
     CONF_TYPE_MOVING,
     CONF_TYPE_STATIC,
+    CONF_USED_HOURS_LOW_ENTITY,
     DOMAIN,
 )
 
@@ -59,7 +59,7 @@ class NordpoolPlannerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             elif self.data[CONF_TYPE] == CONF_TYPE_STATIC:
                 self.data[CONF_START_TIME_ENTITY] = True
                 self.data[CONF_END_TIME_ENTITY] = True
-                self.data[CONF_REMAINING_HOURS_ENTITY] = True
+                self.data[CONF_USED_HOURS_LOW_ENTITY] = True
 
             self.options = {}
             np_entity = self.hass.states.get(self.data[CONF_PRICES_ENTITY])

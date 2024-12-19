@@ -28,12 +28,12 @@ from .const import (
     CONF_DURATION_ENTITY,
     CONF_END_TIME_ENTITY,
     CONF_PRICES_ENTITY,
-    CONF_REMAINING_HOURS_ENTITY,
     CONF_SEARCH_LENGTH_ENTITY,
     CONF_START_TIME_ENTITY,
     CONF_TYPE,
     CONF_TYPE_MOVING,
     CONF_TYPE_STATIC,
+    CONF_USED_HOURS_LOW_ENTITY,
     DOMAIN,
 )
 
@@ -138,7 +138,7 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
 
     def data_21_to_22(data: dict):
         if data[CONF_TYPE] == CONF_TYPE_STATIC:
-            data[CONF_REMAINING_HOURS_ENTITY] = True
+            data[CONF_USED_HOURS_LOW_ENTITY] = True
             data[CONF_START_TIME_ENTITY] = True
         return data
 
