@@ -425,7 +425,14 @@ class NordpoolPlanner:
 
         # initialize local variables
         now = dt_util.now()
-        duration = dt.timedelta(hours=self._duration - 1)
+
+        if self._is_static and self.low_hours is not None:
+            if self.low_hours >= self._duration:
+                _LOGGER.debug("No need to update, quota of hours fulfilled")
+                self.set_done_for_now()
+            duration = dt.timedelta(hours=max(0, self._duration - self.low_hours) - 1)
+        else:
+            duration = dt.timedelta(hours=self._duration - 1)
 
         # Initiate states and variables for Moving planner
         if self._is_moving:
@@ -471,6 +478,7 @@ class NordpoolPlanner:
             if not prices_group.valid:
                 continue
                 # TODO: Should not end up here, why?
+                # Does end up here now when (duration - hours_low) return zero
             prices_groups.append(prices_group)
 
         if len(prices_groups) == 0:
@@ -559,8 +567,24 @@ class NordpoolPlanner:
                 self._prices_entity.current_price_attr / prices_group.average
             )
         else:
-            self.low_cost_state.now_cost_rate = STATE_UNAVAILABLE
+            self.high_cost_state.now_cost_rate = STATE_UNAVAILABLE
         _LOGGER.debug("Wrote highest cost state: %s", self.high_cost_state)
+
+    def set_done_for_now(self) -> None:
+        """Set output state to off."""
+        now_hour = dt_util.now().replace(minute=0, second=0, microsecond=0)
+        start_hour = now_hour.replace(hour=self._start_time)
+        if start_hour < now_hour():
+            start_hour += dt.timedelta(days=1)
+        self.low_cost_state.starts_at = start_hour
+        self.low_cost_state.cost_at = STATE_UNAVAILABLE
+        self.low_cost_state.now_cost_rate = STATE_UNAVAILABLE
+        self.high_cost_state.starts_at = start_hour
+        self.high_cost_state.cost_at = STATE_UNAVAILABLE
+        self.high_cost_state.now_cost_rate = STATE_UNAVAILABLE
+        _LOGGER.debug("Setting output states to unavailable")
+        for listener in self._output_listeners.values():
+            listener.update_callback()
 
     def set_unavailable(self) -> None:
         """Set output state to unavailable."""
