@@ -136,12 +136,20 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
         _LOGGER.warning('Could not find "np_entity" in config_entry')
         raise MigrateError('Could not find "np_entity" in config_entry')
 
+    def data_21_to_22(data: dict):
+        if data[CONF_TYPE] == CONF_TYPE_STATIC:
+            data[CONF_REMAINING_HOURS_ENTITY] = True
+            data[CONF_START_TIME_ENTITY] = True
+        return data
+
     if config_entry.version == 1:
         try:
             # Version 1.x to 2.0
             new_options = options_1x_to_20(new_options, new_data, hass)
             # Version 2.0 to 2.1
             new_data = data_20_to_21(new_data)
+            # Version 2.1 to 2.2
+            new_data = data_21_to_22(new_data)
         except MigrateError:
             _LOGGER.warning("Error while upgrading from version 1.x to 2.1")
             return False
@@ -150,8 +158,18 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
         try:
             # Version 2.0 to 2.1
             new_data = data_20_to_21(new_data)
+            # Version 2.1 to 2.2
+            new_data = data_21_to_22(new_data)
         except MigrateError:
             _LOGGER.warning("Error while upgrading from version 2.0 to 2.1")
+            return False
+
+    if config_entry.version == 2 and config_entry.minor_version == 1:
+        try:
+            # Version 2.1 to 2.2
+            new_data = data_21_to_22(new_data)
+        except MigrateError:
+            _LOGGER.warning("Error while upgrading from version 2.1 to 2.2")
             return False
 
     hass.config_entries.async_update_entry(
@@ -203,7 +221,7 @@ class NordpoolPlanner:
         # TODO: Make dictionary?
 
         # Output entities
-        self._output_listeners = dict[str, NordpoolPlannerEntity]
+        self._output_listeners: dict[str, NordpoolPlannerEntity] = {}
 
         # Local state variables
         self._last_update = None
@@ -341,9 +359,11 @@ class NordpoolPlanner:
             )
         )
 
-    def register_output_listener_entity(self, entity: NordpoolPlannerEntity, conf_key="") -> None:
+    def register_output_listener_entity(
+        self, entity: NordpoolPlannerEntity, conf_key=""
+    ) -> None:
         """Register output entity."""
-        if self._output_listeners.get(conf_key):
+        if conf_key in self._output_listeners:
             _LOGGER.warning(
                 'An output listener with key "%s" and unique id "%s" is overriding previous entity "%s"',
                 conf_key,
