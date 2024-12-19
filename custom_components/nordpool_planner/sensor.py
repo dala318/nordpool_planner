@@ -183,9 +183,7 @@ class NordpoolPlannerRemainingTimeSensor(NordpoolPlannerSensor, RestoreSensor):
         ):
             self._planner.low_hours = last_state.state
         else:
-            # self._planner.low_hours = 0
-            pass
-
+            self._planner.low_hours = 0
 
     @property
     def native_value(self):

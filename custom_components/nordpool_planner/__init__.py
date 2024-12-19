@@ -543,6 +543,8 @@ class NordpoolPlanner:
                 if end_time.hour == now.hour:
                     self.low_hours = 0
         self._last_update = now
+        for listener in self._output_listeners.values():
+            listener.update_callback()
 
     def set_lowest_cost_state(self, prices_group: NordpoolPricesGroup) -> None:
         """Set the state to output variable."""
@@ -555,8 +557,6 @@ class NordpoolPlanner:
         else:
             self.low_cost_state.now_cost_rate = STATE_UNAVAILABLE
         _LOGGER.debug("Wrote lowest cost state: %s", self.low_cost_state)
-        for listener in self._output_listeners.values():
-            listener.update_callback()
 
     def set_highest_cost_state(self, prices_group: NordpoolPricesGroup) -> None:
         """Set the state to output variable."""
@@ -569,8 +569,6 @@ class NordpoolPlanner:
         else:
             self.low_cost_state.now_cost_rate = STATE_UNAVAILABLE
         _LOGGER.debug("Wrote highest cost state: %s", self.high_cost_state)
-        for listener in self._output_listeners.values():
-            listener.update_callback()
 
     def set_unavailable(self) -> None:
         """Set output state to unavailable."""
