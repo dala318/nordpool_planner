@@ -174,9 +174,10 @@ class NordpoolPlannerUsedHoursSensor(NordpoolPlannerSensor, RestoreSensor):
         if (
             (last_state := await self.async_get_last_state()) is not None
             and last_state.state not in (STATE_UNKNOWN, STATE_UNAVAILABLE)
+            and last_state.state.isdigit()
             # and (extra_data := await self.async_get_last_sensor_data()) is not None
         ):
-            self._planner.low_hours = last_state.state
+            self._planner.low_hours = int(last_state.state)
         else:
             self._planner.low_hours = 0
 
