@@ -5,26 +5,21 @@ from __future__ import annotations
 import logging
 
 from homeassistant.components.sensor import (
+    RestoreSensor,
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
-    RestoreSensor,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
-    CONF_STATE,
-    STATE_UNAVAILABLE,
-    STATE_UNKNOWN,
-    EntityCategory,
-)
+from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN, EntityCategory
 from homeassistant.core import HomeAssistant
 
 from . import NordpoolPlanner, NordpoolPlannerEntity
 from .const import (
     CONF_HIGH_COST_ENTITY,
     CONF_LOW_COST_ENTITY,
-    CONF_REMAINING_HOURS_ENTITY,
     CONF_STARTS_AT_ENTITY,
+    CONF_USED_HOURS_LOW_ENTITY,
     DOMAIN,
 )
 
@@ -47,8 +42,8 @@ HIGH_COST_START_AT_ENTITY_DESCRIPTION = SensorEntityDescription(
     device_class=SensorDeviceClass.TIMESTAMP,
 )
 
-REMAINING_HOURS_ENTITY_DESCRIPTION = SensorEntityDescription(
-    key=CONF_REMAINING_HOURS_ENTITY,
+USED_HOURS_LOW_ENTITY_DESCRIPTION = SensorEntityDescription(
+    key=CONF_USED_HOURS_LOW_ENTITY,
     device_class=SensorDeviceClass.DURATION,
     entity_category=EntityCategory.DIAGNOSTIC,
 )
@@ -79,11 +74,11 @@ async def async_setup_entry(
                 )
             )
 
-        if config_entry.data.get(CONF_REMAINING_HOURS_ENTITY):
+        if config_entry.data.get(CONF_USED_HOURS_LOW_ENTITY):
             entities.append(
-                NordpoolPlannerRemainingTimeSensor(
+                NordpoolPlannerUsedHoursSensor(
                     planner,
-                    entity_description=REMAINING_HOURS_ENTITY_DESCRIPTION,
+                    entity_description=USED_HOURS_LOW_ENTITY_DESCRIPTION,
                 )
             )
 
@@ -170,7 +165,7 @@ class NordpoolPlannerStartAtSensor(NordpoolPlannerSensor):
     #     return state_attributes
 
 
-class NordpoolPlannerRemainingTimeSensor(NordpoolPlannerSensor, RestoreSensor):
+class NordpoolPlannerUsedHoursSensor(NordpoolPlannerSensor, RestoreSensor):
     """Start at specific sensor."""
 
     async def async_added_to_hass(self) -> None:
