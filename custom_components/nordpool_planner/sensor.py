@@ -211,3 +211,12 @@ class NordpoolPlannerHealthSensor(NordpoolPlannerSensor, RestoreSensor):
     def native_value(self):
         """Output state."""
         return self._planner.planner_state.name
+
+    # @property
+    # def extra_state_attributes(self):
+    #     """Extra state attributes."""
+    #     state_attributes = {
+    #         "running_state": STATE_UNKNOWN,
+    #         "config_state": STATE_UNKNOWN,
+    #     }
+    #     return state_attributes
