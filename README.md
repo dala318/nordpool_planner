@@ -1,6 +1,6 @@
 # nordpool_planner custom component for Home Assistant
 
-Requires https://github.com/custom-components/nordpool
+Requires https://github.com/custom-components/nordpool (not tested with new [HA native Nordpool](https://www.home-assistant.io/integrations/nordpool/), likely the sensor attributes are not same as the custom integration) or https://github.com/JaccoR/hass-entso-e
 
 > **NOTE**: This is a based on https://github.com/jpulakka/nordpool_diff
 
