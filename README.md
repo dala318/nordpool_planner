@@ -32,8 +32,8 @@ Apart from potentially saving some money, this kind of temporal shifting of cons
 During setup some preconditions and selections are needed:
 
 * Give a name to the service
-* Select type "Moving" or "Static", more about these below (only moving is properly implemented)
-* Select Nordpool prices entity from list to base states on (ENTSO-e are selectable but very untested)
+* Select type "Moving" or "Static", more about these below (static is still untested)
+* Select Prices entity from list to base states on (ENTSO-e are selectable but not as well tested)
 * Select which optional features you want activated, more about these below as well
 * Submit and set your configuration parameters
 
@@ -53,31 +53,33 @@ What should be said is that since the `search_length` window is continuously mov
 
 ### Static
 
-> **WORK IN PROGRESS**: This version of entity is still not fully tested, may need some more work to work properly.
+> **NOT FINISHED**: This version of planner is still not fully functional, need some more work to work properly. For now the planner will search for the remaining duration (duration - spent-hours) in the remaining time-span. This means that as you close in to fulfilling the `duration` it will get smaller and it could be that the active time is aborted for a while since there is easier to find cheaper average further ahead. Normally this should not happen as the price-curve in most cases has a concave shape and once you have found the initial best match for cheap hours it includes both the falling and rising edge of curve (will only get more expensive closer to the `end_hour`)
 
-`end_hour` can be in the range of 0 to 23 and specifies at what time within 24 hours the amount of active hours shall be selected.
+Three non-optional configuration entities will be created and you need to set these to a value that matches your consumption profile.
 
-The integration will use `var_end_hour_entity` if supplied and can be interpreted as int, otherwise `end_hour` or the default value.
+* `start_hour` specifies the time of day the searching shall start.
+* `end_hour` specifies the time of day the searching shall stop.
+* `duration` For now this entity specified how many hours of low-price shall be found inside the search range.
 
-> **NOT IMPLEMENTED**: No support implemented to use this setting
-`split_hours` tell if allowed to find low-cost hours that are not consecutive
+More to come about the expected behavior once it fully implemented.
 
 ## Optional features
 
 ### Accept cost
 
 Creates a configuration number entity slider that accepts the first price that has an average price below this value, regardless if there are lower prices further ahead.
-<!-- `accept_cost` specifies a price level in the currency of your `nordpool_entity`, that if an "average over a duration" is below this value, it is accepted and used. Even if not the lowest in the range specified. -->
 
 ### Accept rate
 
-Creates a configuration number entity slider that accepts the first price that has an average price-rate to Nordpool average below this value, regardless if there are lower prices further ahead.
-<!-- `accept_rate` specifies a price rate, that if an "average over a duration" divided by nordpool average (`nordpool_entity.attributes.average`) is below this rate, it is accepted and used. Even if not the lowest in the range specified. E.g. if set to 1 an "average over a duration" <= "nordpool average" is accepted. If 0.5 it has to be half the price of "nordpool average". The idea is to not be as sensitive to offsets I price levels but just a generic rule to accept low section, not just the lowest. -->
+Creates a configuration number entity slider that accepts the first price that has an average price-rate to Nordpool average (range / overall) below this value, regardless if there are lower prices further ahead.
 
-This is more dynamic in the sense that it adapts to overall price level, but there are some consideration you need to think of (and extra logic may have to be implemented).
+This is more dynamic in the sense that it adapts to overall price level, but there are some consideration you need to think of if If Nordpool-average or range-average happens to be Zero or lower (and extra logic may have to be implemented).
 
-* If Nordpool average happens to be Zero it will not work (duration-average / nordpool-average)
-* If any of nordpool-average or duration-average is negative the rate will be negative. If both negative the rate will be positive.
+* If both negative it will activate, makes no sense to compare inverted rates (negative / negative = positive, but then above set rate is wanted)
+* If both zero it will activate, rate is infinite (division by zero, but average is low)
+* If only Nordpool average is zero the rate will not work (no feasible rate can be calculated)
+
+In general if you select to have an `accept_rate` active you should also have an `accept_price` set to at least 0 (or quite low) to make it work as expected as the rate can vary quite much when dividing small numbers.
 
 ### High cost
 
@@ -86,9 +88,6 @@ This was requested as an extra feature and creates a binary sensor which tell in
 ### Starts at
 
 No extra logic, just creates extra sensor entities that tell in plain values when each of the binary sensors will activate. Same value that is in the extra_attributes of the binary sensor.
-
-
-The planner types has some additional configuration variables
 
 ## Binary sensor attributes
 
@@ -106,7 +105,7 @@ Apart from the true/false if now is the time to turn on electricity usage the se
 
 Import this blueprint and choose the nordpool_planner low & high cost states, and the climate entity you want to control.
 
-[![Then, use this blueprint.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fdala318%2Fnordpool_planner%2Fblob%2Fmaster%2Fblueprints%2Fautomation%2Fthermostat_fixed.yaml)
+[![Fixed temp blueprint.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fdala318%2Fnordpool_planner%2Fblob%2Fmaster%2Fblueprints%2Fautomation%2Fthermostat_fixed.yaml)
 
 Now, whenever the price goes up or down, Nordpool Planner will change the temperature based on the price.
 
@@ -116,13 +115,13 @@ First make sure to create two input number entities for `base temperature` and `
 
 Import this blueprint and choose your newly created input numbers, the nordpool_planner low & high cost states, and the climate entity you want to control.
 
-[![Then, use this blueprint.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fdala318%2Fnordpool_planner%2Fblob%2Fmaster%2Fblueprints%2Fautomation%2Fthermostat_number.yaml)
+[![Dynamic blueprint.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fdala318%2Fnordpool_planner%2Fblob%2Fmaster%2Fblueprints%2Fautomation%2Fthermostat_number.yaml)
 
-Now, whenever you change the input numbers or the price goes up or down, Nordpool Planner will change the temperature based on the price.
+Now, whenever you change the input numbers or the price goes up or down, Nordpool Planner will change the temperature based on the price and your set numbers.
 
 ## Usage
 
-Some words should be said about the usage and how it behaves.
+Some words should be said about the usage of planner and how it behaves.
 
 The search length variable should be set to to a value within which you could accept no high electricity usage, and the ratio window/search should somewhat correspond to the active/passive time of your main user of electricity. Still, the search window for the optimal spot to electricity is moving along in front of current time, so there might be a longer duration of passive usage than the search length. Therefor keeping the search length low (3-5h) should likely be optimal, unless you have a large storage capacity of electricity/heat that can wait for a longer duration and when cheap electricity draw as much as possible.
 

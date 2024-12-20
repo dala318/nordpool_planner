@@ -29,15 +29,17 @@ from .const import (
     CONF_END_TIME_ENTITY,
     CONF_PRICES_ENTITY,
     CONF_SEARCH_LENGTH_ENTITY,
+    CONF_START_TIME_ENTITY,
     CONF_TYPE,
     CONF_TYPE_MOVING,
     CONF_TYPE_STATIC,
+    CONF_USED_HOURS_LOW_ENTITY,
     DOMAIN,
 )
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS = [Platform.BINARY_SENSOR, Platform.NUMBER, Platform.SENSOR]
+PLATFORMS = [Platform.BINARY_SENSOR, Platform.BUTTON, Platform.NUMBER, Platform.SENSOR]
 
 
 async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
@@ -134,12 +136,20 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
         _LOGGER.warning('Could not find "np_entity" in config_entry')
         raise MigrateError('Could not find "np_entity" in config_entry')
 
+    def data_21_to_22(data: dict):
+        if data[CONF_TYPE] == CONF_TYPE_STATIC:
+            data[CONF_USED_HOURS_LOW_ENTITY] = True
+            data[CONF_START_TIME_ENTITY] = True
+        return data
+
     if config_entry.version == 1:
         try:
             # Version 1.x to 2.0
             new_options = options_1x_to_20(new_options, new_data, hass)
             # Version 2.0 to 2.1
             new_data = data_20_to_21(new_data)
+            # Version 2.1 to 2.2
+            new_data = data_21_to_22(new_data)
         except MigrateError:
             _LOGGER.warning("Error while upgrading from version 1.x to 2.1")
             return False
@@ -148,8 +158,18 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
         try:
             # Version 2.0 to 2.1
             new_data = data_20_to_21(new_data)
+            # Version 2.1 to 2.2
+            new_data = data_21_to_22(new_data)
         except MigrateError:
             _LOGGER.warning("Error while upgrading from version 2.0 to 2.1")
+            return False
+
+    if config_entry.version == 2 and config_entry.minor_version == 1:
+        try:
+            # Version 2.1 to 2.2
+            new_data = data_21_to_22(new_data)
+        except MigrateError:
+            _LOGGER.warning("Error while upgrading from version 2.1 to 2.2")
             return False
 
     hass.config_entries.async_update_entry(
@@ -196,11 +216,16 @@ class NordpoolPlanner:
         self._accept_cost_number_entity = ""
         self._accept_rate_number_entity = ""
         self._search_length_number_entity = ""
+        self._start_time_number_entity = ""
         self._end_time_number_entity = ""
         # TODO: Make dictionary?
 
         # Output entities
-        self._output_listeners = {}
+        self._output_listeners: dict[str, NordpoolPlannerEntity] = {}
+
+        # Local state variables
+        self._last_update = None
+        self.low_hours = None
 
         # Output states
         self.low_cost_state = NordpoolPlannerState()
@@ -247,6 +272,11 @@ class NordpoolPlanner:
         return self._config.data[CONF_TYPE] == CONF_TYPE_MOVING
 
     @property
+    def _is_static(self) -> bool:
+        """Get if planner is of type Static."""
+        return self._config.data[CONF_TYPE] == CONF_TYPE_STATIC
+
+    @property
     def _search_length(self) -> int:
         """Get search length parameter."""
         return self.get_number_entity_value(
@@ -254,9 +284,11 @@ class NordpoolPlanner:
         )
 
     @property
-    def _is_static(self) -> bool:
-        """Get if planner is of type Moving."""
-        return self._config.data[CONF_TYPE] == CONF_TYPE_STATIC
+    def _start_time(self) -> int:
+        """Get start time parameter."""
+        return self.get_number_entity_value(
+            self._start_time_number_entity, integer=True
+        )
 
     @property
     def _end_time(self) -> int:
@@ -317,6 +349,8 @@ class NordpoolPlanner:
             self._accept_rate_number_entity = entity_id
         elif conf_key == CONF_SEARCH_LENGTH_ENTITY:
             self._search_length_number_entity = entity_id
+        elif conf_key == CONF_START_TIME_ENTITY:
+            self._start_time_number_entity = entity_id
         elif conf_key == CONF_END_TIME_ENTITY:
             self._end_time_number_entity = entity_id
         else:
@@ -333,9 +367,11 @@ class NordpoolPlanner:
             )
         )
 
-    def register_output_listener_entity(self, entity, conf_key="") -> None:
+    def register_output_listener_entity(
+        self, entity: NordpoolPlannerEntity, conf_key=""
+    ) -> None:
         """Register output entity."""
-        if self._output_listeners.get(conf_key):
+        if conf_key in self._output_listeners:
             _LOGGER.warning(
                 'An output listener with key "%s" and unique id "%s" is overriding previous entity "%s"',
                 conf_key,
@@ -391,21 +427,50 @@ class NordpoolPlanner:
             _LOGGER.warning("Aborting update since no valid Search length")
             return
 
-        if self._is_static and not self._end_time:
+        if self._is_static and not (self._start_time and self._end_time):
             _LOGGER.warning("Aborting update since no valid end time")
             return
 
         # initialize local variables
         now = dt_util.now()
-        duration = dt.timedelta(hours=self._duration - 1)
 
+        if self._is_static and self.low_hours is not None:
+            if self.low_hours >= self._duration:
+                _LOGGER.debug("No need to update, quota of hours fulfilled")
+                self.set_done_for_now()
+            duration = dt.timedelta(hours=max(0, self._duration - self.low_hours) - 1)
+            # TODO: Need to fix this so that the duration amount of hours are found in range for static
+            # duration = dt.timedelta(hours=1)
+        else:
+            duration = dt.timedelta(hours=self._duration - 1)
+
+        # Initiate states and variables for Moving planner
         if self._is_moving:
+            start_time = now
             end_time = now + dt.timedelta(hours=self._search_length)
-        elif self._is_static:
-            end_time = now.replace(minute=0, second=0, microsecond=0)
-            if self._end_time < now.hour:
-                end_time += dt.timedelta(days=1)
 
+        # Initiate states and variables for Static planner
+        elif self._is_static:
+            start_time = now.replace(
+                hour=self._start_time, minute=0, second=0, microsecond=0
+            )
+            end_time = now.replace(
+                hour=self._end_time, minute=0, second=0, microsecond=0
+            )
+            # First ensure end is after start (spans over midnight)
+            if end_time < start_time:
+                # Have not started range yet
+                if end_time < now:
+                    end_time += dt.timedelta(days=1)
+                # Started range "yesterday"
+                else:
+                    start_time -= dt.timedelta(days=1)
+            # In active range
+            if start_time < now and end_time > now:
+                # Bump up start to now so that prices in the past is not used
+                start_time = now
+
+        # Invalid planner type
         else:
             _LOGGER.warning("Aborting update since unknown planner type")
             return
@@ -414,7 +479,7 @@ class NordpoolPlanner:
         offset = 0
         while True:
             start_offset = dt.timedelta(hours=offset)
-            first_time = now + start_offset
+            first_time = start_time + start_offset
             last_time = first_time + duration
             if offset != 0 and last_time > end_time:
                 break
@@ -428,7 +493,7 @@ class NordpoolPlanner:
         if len(prices_groups) == 0:
             _LOGGER.warning(
                 "Aborting update since no prices fetched in range %s to %s with duration %s",
-                now,
+                start_time,
                 end_time,
                 duration,
             )
@@ -437,7 +502,7 @@ class NordpoolPlanner:
         _LOGGER.debug(
             "Processing %s prices_groups found in range %s to %s",
             len(prices_groups),
-            now,
+            start_time,
             end_time,
         )
 
@@ -450,14 +515,14 @@ class NordpoolPlanner:
                 self.set_lowest_cost_state(p)
                 break
             if accept_rate:
-                if self._prices_entity.average_attr == 0:
-                    if p.average <= 0 and accept_rate <= 0:
+                if self._prices_entity.average_attr <= 0:
+                    if p.average <= 0:
                         _LOGGER.debug(
-                            "Accept rate indirectly fulfilled (NP average 0 but cost and accept rate <= 0)"
+                            "Accept rate indirectly fulfilled (NP average & range average <= 0)"
                         )
                         self.set_lowest_cost_state(p)
                         break
-                elif (p.average / self._prices_entity.average_attr) < accept_rate:
+                elif (p.average / self._prices_entity.average_attr) <= accept_rate:
                     _LOGGER.debug("Accept rate fulfilled")
                     self.set_lowest_cost_state(p)
                     break
@@ -472,6 +537,24 @@ class NordpoolPlanner:
                 highest_cost_group = p
         self.set_highest_cost_state(highest_cost_group)
 
+        if not self._last_update:
+            pass
+        elif self._last_update.hour != now.hour:
+            _LOGGER.debug(
+                "Swapping hour on change from %s to %s", self._last_update, now
+            )
+            if self._is_static:
+                if self.low_cost_state.on_at(now):
+                    if self.low_hours is None:
+                        self.low_hours = 1
+                    else:
+                        self.low_hours += 1
+                if end_time.hour == now.hour:
+                    self.low_hours = 0
+        self._last_update = now
+        for listener in self._output_listeners.values():
+            listener.update_callback()
+
     def set_lowest_cost_state(self, prices_group: NordpoolPricesGroup) -> None:
         """Set the state to output variable."""
         self.low_cost_state.starts_at = prices_group.start_time
@@ -483,8 +566,6 @@ class NordpoolPlanner:
         else:
             self.low_cost_state.now_cost_rate = STATE_UNAVAILABLE
         _LOGGER.debug("Wrote lowest cost state: %s", self.low_cost_state)
-        for listener in self._output_listeners.values():
-            listener.update_callback()
 
     def set_highest_cost_state(self, prices_group: NordpoolPricesGroup) -> None:
         """Set the state to output variable."""
@@ -495,8 +576,22 @@ class NordpoolPlanner:
                 self._prices_entity.current_price_attr / prices_group.average
             )
         else:
-            self.low_cost_state.now_cost_rate = STATE_UNAVAILABLE
+            self.high_cost_state.now_cost_rate = STATE_UNAVAILABLE
         _LOGGER.debug("Wrote highest cost state: %s", self.high_cost_state)
+
+    def set_done_for_now(self) -> None:
+        """Set output state to off."""
+        now_hour = dt_util.now().replace(minute=0, second=0, microsecond=0)
+        start_hour = now_hour.replace(hour=self._start_time)
+        if start_hour < now_hour():
+            start_hour += dt.timedelta(days=1)
+        self.low_cost_state.starts_at = start_hour
+        self.low_cost_state.cost_at = STATE_UNAVAILABLE
+        self.low_cost_state.now_cost_rate = STATE_UNAVAILABLE
+        self.high_cost_state.starts_at = start_hour
+        self.high_cost_state.cost_at = STATE_UNAVAILABLE
+        self.high_cost_state.now_cost_rate = STATE_UNAVAILABLE
+        _LOGGER.debug("Setting output states to unavailable")
         for listener in self._output_listeners.values():
             listener.update_callback()
 
@@ -691,6 +786,15 @@ class NordpoolPlannerState:
         """For diagnostics serialization."""
         return self.__dict__
 
+    def on_at(self, time: dt.datetime) -> bool:
+        """Get boolean state if start is before given timestamp."""
+        if self.starts_at not in [
+            STATE_UNKNOWN,
+            STATE_UNAVAILABLE,
+        ]:
+            return self.starts_at < time
+        return False
+
 
 class NordpoolPlannerEntity(Entity):
     """Base class for nordpool planner entities."""
@@ -719,3 +823,7 @@ class NordpoolPlannerEntity(Entity):
     def should_poll(self):
         """No need to poll. Coordinator notifies entity of updates."""
         return False
+
+    def update_callback(self) -> None:
+        """Call from planner that new data available."""
+        self.schedule_update_ha_state()

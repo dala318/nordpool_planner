@@ -89,17 +89,19 @@ class NordpoolPlannerBinarySensor(NordpoolPlannerEntity, BinarySensorEntity):
         state = None
         # TODO: This can be made nicer to get value from states in dictionary in planner
         if self.entity_description.key == CONF_LOW_COST_ENTITY:
-            if self._planner.low_cost_state.starts_at not in [
-                STATE_UNKNOWN,
-                STATE_UNAVAILABLE,
-            ]:
-                state = self._planner.low_cost_state.starts_at < dt_util.now()
+            state = self._planner.low_cost_state.on_at(dt_util.now())
+            # if self._planner.low_cost_state.starts_at not in [
+            #     STATE_UNKNOWN,
+            #     STATE_UNAVAILABLE,
+            # ]:
+            #     state = self._planner.low_cost_state.starts_at < dt_util.now()
         if self.entity_description.key == CONF_HIGH_COST_ENTITY:
-            if self._planner.high_cost_state.starts_at not in [
-                STATE_UNKNOWN,
-                STATE_UNAVAILABLE,
-            ]:
-                state = self._planner.high_cost_state.starts_at < dt_util.now()
+            state = self._planner.high_cost_state.on_at(dt_util.now())
+            # if self._planner.high_cost_state.starts_at not in [
+            #     STATE_UNKNOWN,
+            #     STATE_UNAVAILABLE,
+            # ]:
+            #     state = self._planner.high_cost_state.starts_at < dt_util.now()
         _LOGGER.debug(
             'Returning state "%s" of binary sensor "%s"',
             state,
@@ -145,10 +147,6 @@ class NordpoolPlannerBinarySensor(NordpoolPlannerEntity, BinarySensorEntity):
         """Load the last known state when added to hass."""
         await super().async_added_to_hass()
         self._planner.register_output_listener_entity(self, self.entity_description.key)
-
-    def update_callback(self) -> None:
-        """Call from planner that new data available."""
-        self.schedule_update_ha_state()
 
     # async def async_update(self):
     #     """Called from Home Assistant to update entity value"""

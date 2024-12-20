@@ -1,9 +1,12 @@
+.coverage
+.HA_VERSION
+__pycache__
+config_entry-nordpool_planner.json
+home-assistant*
+custom_components/.gitignore
+/*.yaml
 .idea/
 .storage/
 blueprints/
 www/
-.HA_VERSION
-__pycache__
-home-assistant*
-/*.yaml
-.coverage
+repos/
