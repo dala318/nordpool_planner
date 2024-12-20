@@ -230,7 +230,7 @@ class NordpoolPlanner:
         # Local state variables
         self._last_update = None
         self.low_hours = None
-        self._state = PlannerStates.Unknown
+        self._planner_status = NordpoolPlannerStatus()
 
         # Output states
         self.low_cost_state = NordpoolPlannerState()
@@ -267,9 +267,9 @@ class NordpoolPlanner:
         return self._prices_entity.current_price_attr
 
     @property
-    def planner_state(self) -> PlannerStates:
-        """Current price from source sensor."""
-        return self._state
+    def planner_status(self) -> NordpoolPlannerStatus:
+        """Current planner status."""
+        return self._planner_status
 
     @property
     def _duration(self) -> int:
@@ -421,29 +421,42 @@ class NordpoolPlanner:
         _LOGGER.debug("Updating planner")
 
         # Update inputs
-        if not self._prices_entity.update(self._hass):
+        if not self._prices_entity.update(self._hass) and not self._prices_entity.valid:
             self.set_unavailable()
-            return
-
-        if not self._prices_entity.valid:
-            self._state = PlannerStates.Warning
-            _LOGGER.warning("Aborting update since no valid Nordpool data")
+            self._planner_status.status = PlannerStates.Error
+            self._planner_status.running_text = "No valid Price data"
             return
 
         if not self._duration:
-            self._state = PlannerStates.Warning
             _LOGGER.warning("Aborting update since no valid Duration")
+            self._planner_status.status = PlannerStates.Error
+            self._planner_status.running_text = "No valid Duration data"
             return
 
         if self._is_moving and not self._search_length:
-            self._state = PlannerStates.Warning
             _LOGGER.warning("Aborting update since no valid Search length")
+            self._planner_status.status = PlannerStates.Error
+            self._planner_status.running_text = "No valid Search-Length data"
             return
 
         if self._is_static and not (self._start_time and self._end_time):
-            self._state = PlannerStates.Warning
-            _LOGGER.warning("Aborting update since no valid end time")
+            _LOGGER.warning("Aborting update since no valid Start or end time")
+            self._planner_status.status = PlannerStates.Error
+            self._planner_status.running_text = "No valid Start-Time or End-Time"
             return
+
+        # If come this far no running error texts relevant (for now...)
+        self._planner_status.status = PlannerStates.Ok
+        self._planner_status.running_text = "ok"
+        self._planner_status.config_text = "ok"
+
+        if self._is_moving and self._search_length < self._duration:
+            self._planner_status.status = PlannerStates.Warning
+            self._planner_status.config_text = "Duration is Lager than Search-Length"
+
+        # if self._is_static and (self._end_time - self._start_time) < self._duration:
+        #     self._planner_status.status = PlannerStates.Warning
+        #     self._planner_status.config_text = "Duration is Lager than Search-Window"
 
         # initialize local variables
         now = dt_util.now()
@@ -452,6 +465,8 @@ class NordpoolPlanner:
             if self.low_hours >= self._duration:
                 _LOGGER.debug("No need to update, quota of hours fulfilled")
                 self.set_done_for_now()
+                self._planner_status.status = PlannerStates.Idle
+                self._planner_status.running_text = "Quota of hours fulfilled"
                 return
             duration = dt.timedelta(hours=max(0, self._duration - self.low_hours) - 1)
             # TODO: Need to fix this so that the duration amount of hours are found in range for static
@@ -488,6 +503,8 @@ class NordpoolPlanner:
         # Invalid planner type
         else:
             _LOGGER.warning("Aborting update since unknown planner type")
+            self._planner_status.status = PlannerStates.Error
+            self._planner_status.config_text = "Bad planner type"
             return
 
         prices_groups: list[NordpoolPricesGroup] = []
@@ -512,6 +529,8 @@ class NordpoolPlanner:
                 end_time,
                 duration,
             )
+            self._planner_status.status = PlannerStates.Warning
+            self._planner_status.running_text = "No prices in active range"
             return
 
         _LOGGER.debug(
@@ -567,7 +586,6 @@ class NordpoolPlanner:
                 if end_time.hour == now.hour:
                     self.low_hours = 0
         self._last_update = now
-        self._state = PlannerStates.Ok
         for listener in self._output_listeners.values():
             listener.update_callback()
 
@@ -597,7 +615,6 @@ class NordpoolPlanner:
 
     def set_done_for_now(self) -> None:
         """Set output state to off."""
-        self._state = PlannerStates.Idle
         now_hour = dt_util.now().replace(minute=0, second=0, microsecond=0)
         start_hour = now_hour.replace(hour=self._start_time)
         if start_hour < now_hour():
@@ -614,7 +631,6 @@ class NordpoolPlanner:
 
     def set_unavailable(self) -> None:
         """Set output state to unavailable."""
-        self._state = PlannerStates.Error
         self.low_cost_state.starts_at = STATE_UNAVAILABLE
         self.low_cost_state.cost_at = STATE_UNAVAILABLE
         self.low_cost_state.now_cost_rate = STATE_UNAVAILABLE
