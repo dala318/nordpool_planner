@@ -27,6 +27,7 @@ from .const import (
     CONF_ACCEPT_RATE_ENTITY,
     CONF_DURATION_ENTITY,
     CONF_END_TIME_ENTITY,
+    CONF_HEALTH_ENTITY,
     CONF_PRICES_ENTITY,
     CONF_SEARCH_LENGTH_ENTITY,
     CONF_START_TIME_ENTITY,
@@ -141,6 +142,8 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
         if data[CONF_TYPE] == CONF_TYPE_STATIC:
             data[CONF_USED_HOURS_LOW_ENTITY] = True
             data[CONF_START_TIME_ENTITY] = True
+        if CONF_HEALTH_ENTITY not in data:
+            data[CONF_HEALTH_ENTITY] = True
         return data
 
     if config_entry.version == 1:

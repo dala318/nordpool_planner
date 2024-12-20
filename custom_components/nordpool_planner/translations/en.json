@@ -13,7 +13,8 @@
                     "accept_cost_entity": "Accept cost: Creates a configuration parameter that turn on if cost below",
                     "accept_rate_entity": "Accept rate: Creates a configuration parameter that turn on if cost-rate to daily average below",
                     "high_cost_entity": "High cost: Creates a binary sensor that tell in it's the highest cost (inverse of normal)",
-                    "starts_at_entity": "Starts at: Creates additional sensors telling when next lowest and highest cost starts"
+                    "starts_at_entity": "Starts at: Creates additional sensors telling when next lowest and highest cost starts",
+                    "health_entity": "Adds a status entity to tell overall health of planner"
                 }
             }
         },
