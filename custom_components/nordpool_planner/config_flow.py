@@ -17,6 +17,7 @@ from .const import (
     CONF_ACCEPT_RATE_ENTITY,
     CONF_DURATION_ENTITY,
     CONF_END_TIME_ENTITY,
+    CONF_HEALTH_ENTITY,
     CONF_HIGH_COST_ENTITY,
     CONF_LOW_COST_ENTITY,
     CONF_PRICES_ENTITY,
@@ -111,6 +112,7 @@ class NordpoolPlannerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Required(CONF_ACCEPT_RATE_ENTITY, default=False): bool,
                 vol.Required(CONF_HIGH_COST_ENTITY, default=False): bool,
                 vol.Required(CONF_STARTS_AT_ENTITY, default=False): bool,
+                vol.Required(CONF_HEALTH_ENTITY, default=True): bool,
             }
         )
 
