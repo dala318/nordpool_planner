@@ -91,8 +91,7 @@ async def async_setup_entry(
                 )
             )
 
-        # if config_entry.data.get(CONF_HEALTH_ENTITY):
-        if True:
+        if config_entry.data.get(CONF_HEALTH_ENTITY):
             entities.append(
                 NordpoolPlannerHealthSensor(
                     planner,
