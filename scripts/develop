@@ -18,3 +18,6 @@ export PYTHONPATH="${PYTHONPATH}:${PWD}/custom_components"
 
 # Start Home Assistant
 hass --config "${PWD}/config" --debug
+
+# Should sort of work in GitHub code-space
+# /home/codespace/.local/lib/python3.12/site-packages/bin/hass --config "${PWD}/config" --debug
