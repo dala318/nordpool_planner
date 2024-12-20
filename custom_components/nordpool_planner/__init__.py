@@ -814,6 +814,16 @@ class NordpoolPlannerState:
         return False
 
 
+class NordpoolPlannerStatus:
+    """Status for the overall planner."""
+
+    def __init__(self) -> None:
+        """Initiate status."""
+        self.status = PlannerStates.Unknown
+        self.running_text = ""
+        self.config_text = ""
+
+
 class NordpoolPlannerEntity(Entity):
     """Base class for nordpool planner entities."""
 
