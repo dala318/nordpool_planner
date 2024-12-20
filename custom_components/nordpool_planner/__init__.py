@@ -35,6 +35,7 @@ from .const import (
     CONF_TYPE_STATIC,
     CONF_USED_HOURS_LOW_ENTITY,
     DOMAIN,
+    PlannerStates,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -226,6 +227,7 @@ class NordpoolPlanner:
         # Local state variables
         self._last_update = None
         self.low_hours = None
+        self._state = PlannerStates.Unknown
 
         # Output states
         self.low_cost_state = NordpoolPlannerState()
@@ -252,6 +254,11 @@ class NordpoolPlanner:
     def price_now(self) -> str:
         """Current price from source sensor."""
         return self._prices_entity.current_price_attr
+
+    @property
+    def planner_state(self) -> PlannerStates:
+        """Current price from source sensor."""
+        return self._state
 
     @property
     def _duration(self) -> int:
@@ -408,18 +415,22 @@ class NordpoolPlanner:
             return
 
         if not self._prices_entity.valid:
+            self._state = PlannerStates.Warning
             _LOGGER.warning("Aborting update since no valid Nordpool data")
             return
 
         if not self._duration:
+            self._state = PlannerStates.Warning
             _LOGGER.warning("Aborting update since no valid Duration")
             return
 
         if self._is_moving and not self._search_length:
+            self._state = PlannerStates.Warning
             _LOGGER.warning("Aborting update since no valid Search length")
             return
 
         if self._is_static and not (self._start_time and self._end_time):
+            self._state = PlannerStates.Warning
             _LOGGER.warning("Aborting update since no valid end time")
             return
 
@@ -430,6 +441,7 @@ class NordpoolPlanner:
             if self.low_hours >= self._duration:
                 _LOGGER.debug("No need to update, quota of hours fulfilled")
                 self.set_done_for_now()
+                return
             duration = dt.timedelta(hours=max(0, self._duration - self.low_hours) - 1)
             # TODO: Need to fix this so that the duration amount of hours are found in range for static
             # duration = dt.timedelta(hours=1)
@@ -544,6 +556,7 @@ class NordpoolPlanner:
                 if end_time.hour == now.hour:
                     self.low_hours = 0
         self._last_update = now
+        self._state = PlannerStates.Ok
         for listener in self._output_listeners.values():
             listener.update_callback()
 
@@ -573,6 +586,7 @@ class NordpoolPlanner:
 
     def set_done_for_now(self) -> None:
         """Set output state to off."""
+        self._state = PlannerStates.Idle
         now_hour = dt_util.now().replace(minute=0, second=0, microsecond=0)
         start_hour = now_hour.replace(hour=self._start_time)
         if start_hour < now_hour():
@@ -589,6 +603,7 @@ class NordpoolPlanner:
 
     def set_unavailable(self) -> None:
         """Set output state to unavailable."""
+        self._state = PlannerStates.Error
         self.low_cost_state.starts_at = STATE_UNAVAILABLE
         self.low_cost_state.cost_at = STATE_UNAVAILABLE
         self.low_cost_state.now_cost_rate = STATE_UNAVAILABLE
