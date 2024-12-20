@@ -16,11 +16,13 @@ from homeassistant.core import HomeAssistant
 
 from . import NordpoolPlanner, NordpoolPlannerEntity
 from .const import (
+    CONF_HEALTH_ENTITY,
     CONF_HIGH_COST_ENTITY,
     CONF_LOW_COST_ENTITY,
     CONF_STARTS_AT_ENTITY,
     CONF_USED_HOURS_LOW_ENTITY,
     DOMAIN,
+    PlannerStates,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -46,6 +48,13 @@ USED_HOURS_LOW_ENTITY_DESCRIPTION = SensorEntityDescription(
     key=CONF_USED_HOURS_LOW_ENTITY,
     device_class=SensorDeviceClass.DURATION,
     entity_category=EntityCategory.DIAGNOSTIC,
+)
+
+HEALTH_ENTITY_DESCRIPTION = SensorEntityDescription(
+    key=CONF_HEALTH_ENTITY,
+    device_class=SensorDeviceClass.ENUM,
+    entity_category=EntityCategory.DIAGNOSTIC,
+    options=[e.name for e in PlannerStates],
 )
 
 
@@ -79,6 +88,15 @@ async def async_setup_entry(
                 NordpoolPlannerUsedHoursSensor(
                     planner,
                     entity_description=USED_HOURS_LOW_ENTITY_DESCRIPTION,
+                )
+            )
+
+        # if config_entry.data.get(CONF_HEALTH_ENTITY):
+        if True:
+            entities.append(
+                NordpoolPlannerHealthSensor(
+                    planner,
+                    entity_description=HEALTH_ENTITY_DESCRIPTION,
                 )
             )
 
@@ -185,3 +203,12 @@ class NordpoolPlannerUsedHoursSensor(NordpoolPlannerSensor, RestoreSensor):
     def native_value(self):
         """Output state."""
         return self._planner.low_hours
+
+
+class NordpoolPlannerHealthSensor(NordpoolPlannerSensor, RestoreSensor):
+    """Start at specific sensor."""
+
+    @property
+    def native_value(self):
+        """Output state."""
+        return self._planner.planner_state.name
