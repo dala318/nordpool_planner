@@ -49,7 +49,7 @@ ACCEPT_COST_ENTITY_DESCRIPTION = NumberEntityDescription(
 ACCEPT_RATE_ENTITY_DESCRIPTION = NumberEntityDescription(
     key=CONF_ACCEPT_RATE_ENTITY,
     device_class=NumberDeviceClass.DATA_RATE,
-    native_min_value=-1.0,
+    native_min_value=0.1,
     native_max_value=1.0,
     native_step=0.1,
 )

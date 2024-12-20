@@ -1,9 +1,11 @@
+.coverage
+.HA_VERSION
+__pycache__
+home-assistant*
+custom_components/.gitignore
+/*.yaml
 .idea/
 .storage/
 blueprints/
 www/
-.HA_VERSION
-__pycache__
-home-assistant*
-/*.yaml
-.coverage
+repos/
