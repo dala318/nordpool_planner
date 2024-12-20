@@ -430,7 +430,9 @@ class NordpoolPlanner:
             if self.low_hours >= self._duration:
                 _LOGGER.debug("No need to update, quota of hours fulfilled")
                 self.set_done_for_now()
-            duration = dt.timedelta(hours=max(0, self._duration - self.low_hours) - 1)
+            # duration = dt.timedelta(hours=max(0, self._duration - self.low_hours) - 1)
+            # TODO: Need to fix this so that the duration amount of hours are found in range for static
+            duration = dt.timedelta(hours=1)
         else:
             duration = dt.timedelta(hours=self._duration - 1)
 
@@ -478,7 +480,6 @@ class NordpoolPlanner:
             if not prices_group.valid:
                 continue
                 # TODO: Should not end up here, why?
-                # Does end up here now when (duration - hours_low) return zero
             prices_groups.append(prices_group)
 
         if len(prices_groups) == 0:
@@ -506,14 +507,14 @@ class NordpoolPlanner:
                 self.set_lowest_cost_state(p)
                 break
             if accept_rate:
-                if self._prices_entity.average_attr == 0:
-                    if p.average <= 0 and accept_rate <= 0:
+                if self._prices_entity.average_attr <= 0:
+                    if p.average <= 0:
                         _LOGGER.debug(
-                            "Accept rate indirectly fulfilled (NP average 0 but cost and accept rate <= 0)"
+                            "Accept rate indirectly fulfilled (NP average & range average <= 0)"
                         )
                         self.set_lowest_cost_state(p)
                         break
-                elif (p.average / self._prices_entity.average_attr) < accept_rate:
+                elif (p.average / self._prices_entity.average_attr) <= accept_rate:
                     _LOGGER.debug("Accept rate fulfilled")
                     self.set_lowest_cost_state(p)
                     break
