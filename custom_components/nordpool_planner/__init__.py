@@ -430,9 +430,9 @@ class NordpoolPlanner:
             if self.low_hours >= self._duration:
                 _LOGGER.debug("No need to update, quota of hours fulfilled")
                 self.set_done_for_now()
-            # duration = dt.timedelta(hours=max(0, self._duration - self.low_hours) - 1)
+            duration = dt.timedelta(hours=max(0, self._duration - self.low_hours) - 1)
             # TODO: Need to fix this so that the duration amount of hours are found in range for static
-            duration = dt.timedelta(hours=1)
+            # duration = dt.timedelta(hours=1)
         else:
             duration = dt.timedelta(hours=self._duration - 1)
 
