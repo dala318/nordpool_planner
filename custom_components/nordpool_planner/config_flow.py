@@ -96,8 +96,10 @@ class NordpoolPlannerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             if "nordpool" in s or "average_electricity_price" in s
         ]
 
-        if len(selected_entities) == 0:
-            errors["base"] = "No Nordpool entity found"
+        # if len(selected_entities) == 0:
+        #     errors["base"] = "No Nordpool entity found"
+
+        selected_entities.append("file_reader")
 
         schema = vol.Schema(
             {

@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import contextlib
 import datetime as dt
+import json
 import logging
+import pathlib
 
 from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
 from homeassistant.const import (
@@ -12,7 +15,7 @@ from homeassistant.const import (
     STATE_UNKNOWN,
     Platform,
 )
-from homeassistant.core import HomeAssistant, HomeAssistantError
+from homeassistant.core import HomeAssistant, HomeAssistantError, State
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.event import (
@@ -718,9 +721,40 @@ class PricesEntity:
                         return price["value"]
         return None
 
+    def _get_np_from_file(self, data_file: str):
+        """Fake NP entity from file."""
+        diag_data = {}
+        file_path = pathlib.Path(data_file)
+        if file_path.is_file():
+            with contextlib.suppress(ValueError):
+                diag_data = json.loads(file_path.read_text())
+
+        if data := diag_data.get("data"):
+            if planner := data.get("planner"):
+                if prices_entity := planner.get("_prices_entity"):
+                    if np := prices_entity.get("_np"):
+                        return State(
+                            entity_id=np.get("entity_id"),
+                            state=np.get("state"),
+                            attributes=np.get("attributes"),
+                            # last_changed: datetime.datetime | None = None,
+                            # last_reported: datetime.datetime | None = None,
+                            # last_updated: datetime.datetime | None = None,
+                            # context: Context | None = None,
+                            # validate_entity_id: bool | None = True,
+                            # state_info: StateInfo | None = None,
+                            # last_updated_timestamp: float | None = None,
+                        )
+
+        return None
+
     def update(self, hass: HomeAssistant) -> bool:
         """Update price in storage."""
-        np = hass.states.get(self._unique_id)
+        if self._unique_id == "file_reader":
+            np = self._get_np_from_file("config/config_entry-nordpool_planner.json")
+        else:
+            np = hass.states.get(self._unique_id)
+
         if np is None:
             _LOGGER.warning("Got empty data from Nordpool entity %s ", self._unique_id)
         elif "today" not in np.attributes and "prices_today" not in np.attributes:
