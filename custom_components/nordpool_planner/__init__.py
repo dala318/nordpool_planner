@@ -2,11 +2,8 @@
 
 from __future__ import annotations
 
-import contextlib
 import datetime as dt
-import json
 import logging
-import pathlib
 
 from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
 from homeassistant.const import (
@@ -15,7 +12,7 @@ from homeassistant.const import (
     STATE_UNKNOWN,
     Platform,
 )
-from homeassistant.core import HomeAssistant, HomeAssistantError, State
+from homeassistant.core import HomeAssistant, HomeAssistantError
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.event import (
@@ -43,6 +40,7 @@ from .const import (
     PATH_FILE_READER,
     PlannerStates,
 )
+from .helpers import get_np_from_file
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -622,7 +620,7 @@ class NordpoolPlanner:
         """Set output state to off."""
         now_hour = dt_util.now().replace(minute=0, second=0, microsecond=0)
         start_hour = now_hour.replace(hour=self._start_time)
-        if start_hour < now_hour():
+        if start_hour < now_hour:
             start_hour += dt.timedelta(days=1)
         self.low_cost_state.starts_at = start_hour
         self.low_cost_state.cost_at = STATE_UNAVAILABLE
@@ -723,37 +721,10 @@ class PricesEntity:
                         return price["value"]
         return None
 
-    def _get_np_from_file(self, data_file: str):
-        """Fake NP entity from file."""
-        diag_data = {}
-        file_path = pathlib.Path(data_file)
-        if file_path.is_file():
-            with contextlib.suppress(ValueError):
-                diag_data = json.loads(file_path.read_text(encoding="utf-8"))
-
-        if data := diag_data.get("data"):
-            if planner := data.get("planner"):
-                if prices_entity := planner.get("_prices_entity"):
-                    if np := prices_entity.get("_np"):
-                        return State(
-                            entity_id=np.get("entity_id"),
-                            state=np.get("state"),
-                            attributes=np.get("attributes"),
-                            # last_changed: datetime.datetime | None = None,
-                            # last_reported: datetime.datetime | None = None,
-                            # last_updated: datetime.datetime | None = None,
-                            # context: Context | None = None,
-                            # validate_entity_id: bool | None = True,
-                            # state_info: StateInfo | None = None,
-                            # last_updated_timestamp: float | None = None,
-                        )
-
-        return None
-
     def update(self, hass: HomeAssistant) -> bool:
         """Update price in storage."""
         if self._unique_id == NAME_FILE_READER:
-            np = self._get_np_from_file(PATH_FILE_READER)
+            np = get_np_from_file(PATH_FILE_READER)
         else:
             np = hass.states.get(self._unique_id)
 
