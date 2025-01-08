@@ -39,6 +39,8 @@ from .const import (
     CONF_TYPE_STATIC,
     CONF_USED_HOURS_LOW_ENTITY,
     DOMAIN,
+    NAME_FILE_READER,
+    PATH_FILE_READER,
     PlannerStates,
 )
 
@@ -727,7 +729,7 @@ class PricesEntity:
         file_path = pathlib.Path(data_file)
         if file_path.is_file():
             with contextlib.suppress(ValueError):
-                diag_data = json.loads(file_path.read_text())
+                diag_data = json.loads(file_path.read_text(encoding="utf-8"))
 
         if data := diag_data.get("data"):
             if planner := data.get("planner"):
@@ -750,8 +752,8 @@ class PricesEntity:
 
     def update(self, hass: HomeAssistant) -> bool:
         """Update price in storage."""
-        if self._unique_id == "file_reader":
-            np = self._get_np_from_file("config/config_entry-nordpool_planner.json")
+        if self._unique_id == NAME_FILE_READER:
+            np = self._get_np_from_file(PATH_FILE_READER)
         else:
             np = hass.states.get(self._unique_id)
 

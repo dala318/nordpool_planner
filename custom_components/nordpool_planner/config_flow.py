@@ -30,6 +30,7 @@ from .const import (
     CONF_TYPE_STATIC,
     CONF_USED_HOURS_LOW_ENTITY,
     DOMAIN,
+    NAME_FILE_READER,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -99,7 +100,7 @@ class NordpoolPlannerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         # if len(selected_entities) == 0:
         #     errors["base"] = "No Nordpool entity found"
 
-        selected_entities.append("file_reader")
+        selected_entities.append(NAME_FILE_READER)
 
         schema = vol.Schema(
             {
