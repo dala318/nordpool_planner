@@ -30,7 +30,10 @@ from .const import (
     CONF_TYPE_STATIC,
     CONF_USED_HOURS_LOW_ENTITY,
     DOMAIN,
+    NAME_FILE_READER,
+    PATH_FILE_READER,
 )
+from .helpers import get_np_from_file
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -63,7 +66,11 @@ class NordpoolPlannerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 self.data[CONF_USED_HOURS_LOW_ENTITY] = True
 
             self.options = {}
-            np_entity = self.hass.states.get(self.data[CONF_PRICES_ENTITY])
+            if self.data[CONF_PRICES_ENTITY] == NAME_FILE_READER:
+                np_entity = get_np_from_file(PATH_FILE_READER)
+            else:
+                np_entity = self.hass.states.get(self.data[CONF_PRICES_ENTITY])
+
             try:
                 self.options[ATTR_UNIT_OF_MEASUREMENT] = np_entity.attributes.get(
                     ATTR_UNIT_OF_MEASUREMENT
@@ -96,8 +103,10 @@ class NordpoolPlannerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             if "nordpool" in s or "average_electricity_price" in s
         ]
 
-        if len(selected_entities) == 0:
-            errors["base"] = "No Nordpool entity found"
+        # if len(selected_entities) == 0:
+        #     errors["base"] = "No Nordpool entity found"
+
+        selected_entities.append(NAME_FILE_READER)
 
         schema = vol.Schema(
             {

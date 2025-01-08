@@ -32,3 +32,7 @@ CONF_END_TIME_ENTITY = "end_time_entity"
 CONF_USED_TIME_RESET_ENTITY = "used_time_reset_entity"
 CONF_START_TIME_ENTITY = "start_time_entity"
 CONF_USED_HOURS_LOW_ENTITY = "used_hours_low_entity"
+
+NAME_FILE_READER = "file_reader"
+
+PATH_FILE_READER = "config/config_entry-nordpool_planner.json"

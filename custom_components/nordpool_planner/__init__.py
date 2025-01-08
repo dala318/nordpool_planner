@@ -36,8 +36,11 @@ from .const import (
     CONF_TYPE_STATIC,
     CONF_USED_HOURS_LOW_ENTITY,
     DOMAIN,
+    NAME_FILE_READER,
+    PATH_FILE_READER,
     PlannerStates,
 )
+from .helpers import get_np_from_file
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -617,7 +620,7 @@ class NordpoolPlanner:
         """Set output state to off."""
         now_hour = dt_util.now().replace(minute=0, second=0, microsecond=0)
         start_hour = now_hour.replace(hour=self._start_time)
-        if start_hour < now_hour():
+        if start_hour < now_hour:
             start_hour += dt.timedelta(days=1)
         self.low_cost_state.starts_at = start_hour
         self.low_cost_state.cost_at = STATE_UNAVAILABLE
@@ -720,7 +723,11 @@ class PricesEntity:
 
     def update(self, hass: HomeAssistant) -> bool:
         """Update price in storage."""
-        np = hass.states.get(self._unique_id)
+        if self._unique_id == NAME_FILE_READER:
+            np = get_np_from_file(PATH_FILE_READER)
+        else:
+            np = hass.states.get(self._unique_id)
+
         if np is None:
             _LOGGER.warning("Got empty data from Nordpool entity %s ", self._unique_id)
         elif "today" not in np.attributes and "prices_today" not in np.attributes:
