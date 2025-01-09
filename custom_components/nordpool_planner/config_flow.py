@@ -10,7 +10,7 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.const import ATTR_NAME, ATTR_UNIT_OF_MEASUREMENT
 from homeassistant.data_entry_flow import FlowResult
-from homeassistant.helpers import selector
+from homeassistant.helpers import selector, template
 
 from .const import (
     CONF_ACCEPT_COST_ENTITY,
@@ -36,6 +36,18 @@ from .const import (
 from .helpers import get_np_from_file
 
 _LOGGER = logging.getLogger(__name__)
+
+ENTOSOE_DOMAIN = None
+try:
+    from ..entsoe.const import DOMAIN as ENTOSOE_DOMAIN
+except ImportError:
+    _LOGGER.warning("Could not import ENTSO-e integration")
+
+NORDPOOL_DOMAIN = None
+try:
+    from ..nordpool import DOMAIN as NORDPOOL_DOMAIN
+except ImportError:
+    _LOGGER.warning("Could not import Nord Pool integration")
 
 
 class NordpoolPlannerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -96,16 +108,14 @@ class NordpoolPlannerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 title=self.data[ATTR_NAME], data=self.data, options=self.options
             )
 
-        sensor_entities = self.hass.states.async_entity_ids(domain_filter="sensor")
-        selected_entities = [
-            s
-            for s in sensor_entities
-            if "nordpool" in s or "average_electricity_price" in s
-        ]
-
-        # if len(selected_entities) == 0:
-        #     errors["base"] = "No Nordpool entity found"
-
+        selected_entities = []
+        if NORDPOOL_DOMAIN:
+            selected_entities.extend(
+                template.integration_entities(self.hass, NORDPOOL_DOMAIN)
+            )
+        if ENTOSOE_DOMAIN:
+            ent = template.integration_entities(self.hass, ENTOSOE_DOMAIN)
+            selected_entities.extend([s for s in ent if "average" in s])
         selected_entities.append(NAME_FILE_READER)
 
         schema = vol.Schema(
