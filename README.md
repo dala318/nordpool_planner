@@ -54,6 +54,8 @@ What should be said is that since the `search_length` window is continuously mov
 ### Static
 
 > **NOT FINISHED**: This version of planner is still not fully functional, need some more work to work properly. For now the planner will search for the remaining duration (duration - spent-hours) in the remaining time-span. This means that as you close in to fulfilling the `duration` it will get smaller and it could be that the active time is aborted for a while since there is easier to find cheaper average further ahead. Normally this should not happen as the price-curve in most cases has a concave shape and once you have found the initial best match for cheap hours it includes both the falling and rising edge of curve (will only get more expensive closer to the `end_hour`)
+>
+> [Open issues for Static planner](https://github.com/dala318/nordpool_planner/issues?q=is%3Aissue%20state%3Aopen%20label%3Astatic_planner)
 
 Three non-optional configuration entities will be created and you need to set these to a value that matches your consumption profile.
 
