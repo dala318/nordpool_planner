@@ -48,9 +48,18 @@ blueprint:
       selector:
         entity:
           domain: climate
+    require_climate_on:
+      name: Only act if climate is ON
+      description: >
+        If enabled, the automation will only set the temperature when the climate device is not off.
+      default: false
+      selector:
+        boolean: {}
+
   source_url: https://github.com/dala318/nordpool_planner/blob/master/blueprints/automation/thermostat_fixed.yaml
 mode: restart
 max_exceeded: silent
+
 trigger:
   - platform: homeassistant
     event: start
@@ -58,6 +67,7 @@ trigger:
     entity_id:
       - !input binary_sensor_low
       - !input binary_sensor_high
+
 action:
   - variables:
       sensor_low: !input binary_sensor_low
@@ -65,14 +75,22 @@ action:
       base_temp: !input base_temp
       offset_temp: !input offset_temp
       climate: !input climate
-  - service: climate.set_temperature
-    data_template:
-      entity_id: !input climate
-      temperature: >-
-        {% set set_temp = base_temp | float(default=0) %}
-        {% if is_state(sensor_low, "on") %}
-            {% set set_temp = set_temp + offset_temp | float(default=0) %}
-        {% elif is_state(sensor_high, "on") %}
-            {% set set_temp = set_temp - offset_temp | float(default=0) %}
-        {% endif %}
-        {{ set_temp }}
+      require_on: !input require_climate_on
+
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: >
+              {{ not require_on or not is_state(climate, 'off') }}
+        sequence:
+          - service: climate.set_temperature
+            data_template:
+              entity_id: !input climate
+              temperature: >-
+                {% set set_temp = base_temp | float(default=0) %}
+                {% if is_state(sensor_low, "on") %}
+                    {% set set_temp = set_temp + offset_temp | float(default=0) %}
+                {% elif is_state(sensor_high, "on") %}
+                    {% set set_temp = set_temp - offset_temp | float(default=0) %}
+                {% endif %}
+                {{ set_temp }}
