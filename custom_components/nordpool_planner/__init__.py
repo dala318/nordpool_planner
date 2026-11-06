@@ -464,6 +464,19 @@ class NordpoolPlanner:
         # initialize local variables
         now = dt_util.now()
 
+        if self._last_update and self._last_update.hour != now.hour:
+            _LOGGER.debug(
+                "Swapping hour on change from %s to %s", self._last_update, now
+            )
+            if self._is_static:
+                if self.low_cost_state.on_at(now):
+                    if self.low_hours is None:
+                        self.low_hours = 1
+                    else:
+                        self.low_hours += 1
+                if end_time.hour == now.hour:
+                    self.low_hours = 0
+
         if self._is_static and self.low_hours is not None:
             if self.low_hours >= self._duration:
                 _LOGGER.debug("No need to update, quota of hours fulfilled")
@@ -574,20 +587,6 @@ class NordpoolPlanner:
                 highest_cost_group = p
         self.set_highest_cost_state(highest_cost_group)
 
-        if not self._last_update:
-            pass
-        elif self._last_update.hour != now.hour:
-            _LOGGER.debug(
-                "Swapping hour on change from %s to %s", self._last_update, now
-            )
-            if self._is_static:
-                if self.low_cost_state.on_at(now):
-                    if self.low_hours is None:
-                        self.low_hours = 1
-                    else:
-                        self.low_hours += 1
-                if end_time.hour == now.hour:
-                    self.low_hours = 0
         self._last_update = now
         for listener in self._output_listeners.values():
             listener.update_callback()
