@@ -10,7 +10,7 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.const import ATTR_NAME, ATTR_UNIT_OF_MEASUREMENT
 from homeassistant.data_entry_flow import FlowResult
-from homeassistant.helpers import selector, template
+from homeassistant.helpers import selector
 
 from .const import (
     CONF_ACCEPT_COST_ENTITY,
@@ -109,13 +109,26 @@ class NordpoolPlannerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             )
 
         selected_entities = []
+        
         if NORDPOOL_DOMAIN:
             selected_entities.extend(
-                template.integration_entities(self.hass, NORDPOOL_DOMAIN)
+                [
+                    state.entity_id
+                    for state in self.hass.states.async_all()
+                    if state.entity_id.startswith("sensor.nordpool_")
+                ]
             )
+
         if ENTOSOE_DOMAIN:
-            ent = template.integration_entities(self.hass, ENTOSOE_DOMAIN)
-            selected_entities.extend([s for s in ent if "average" in s])
+            selected_entities.extend(
+                [
+                    state.entity_id
+                    for state in self.hass.states.async_all()
+                    if "entsoe" in state.entity_id
+                    and "average" in state.entity_id
+                ]
+            )
+
         selected_entities.append(NAME_FILE_READER)
 
         schema = vol.Schema(
